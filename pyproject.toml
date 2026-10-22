@@ -9,13 +9,14 @@ authors = [
 requires-python = ">=3.13"
 dependencies = [
     "alembic>=1.20.1",
-    "fastapi[standard]>=0.161.0",
+    "fastapi>=0.161.0",
     "langchain>=1.4.7",
     "langchain-openai>=1.7.2",
     "langfuse>=5.0.4",
     "psycopg[binary]>=3.3.6",
     "pydantic-settings>=2.16.1",
     "sqlalchemy[asyncio]>=2.1.6",
+    "uvicorn[standard]>=0.54.0",
 ]
 
 [build-system]
@@ -27,6 +28,8 @@ entrypoint = "hindsight.main:app"
 
 [dependency-groups]
 dev = [
+    "fastapi-cli>=0.0.32",
+    "httpx>=0.28.1",
     "pyright>=1.1.414",
     "pytest>=9.1.1",
     "ruff>=0.17.2",
