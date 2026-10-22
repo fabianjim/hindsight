@@ -1,0 +1,19 @@
+[project]
+name = "hindsight"
+version = "0.1.0"
+description = "AI service for Vestry"
+readme = "README.md"
+authors = [
+    { name = "fabianjim", email = "fabian.jim26@gmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi[standard]>=0.161.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.12.23,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.fastapi]
+entrypoint = "hindsight.main:app"
