@@ -48,6 +48,7 @@ Hindsight is the Python AI service behind Vestry, a portfolio journal for reflec
 **Spend**
 - Every model call reserves its worst-case cost in `BudgetLedger` before it runs and settles the real cost after. A settlement over the reservation blocks all spending until someone resets `ai.budget.blocked`. Crashed or unsettled work keeps its full reservation.
 - Every agent gets `BudgetMiddleware`, listed last so it wraps the model directly and each retry reserves again. It caps `max_tokens`, reads the job from `runtime.context.generation_id`, and only implements the async hook, so a sync `invoke` raises instead of skipping the budget.
+- `get_chat_model()` matches vestry's provider settings: no SDK retries (each would be an unreserved charge), 5 s connect / 30 s read timeouts, `store=False`, and only `HINDSIGHT_OPENAI_API_KEY`, never a stray `OPENAI_API_KEY`.
 - `pricing.PRICES` holds pinned model snapshots only. Changing `HINDSIGHT_CHAT_MODEL` means adding its price; unknown models are refused.
 
 **AI output**
