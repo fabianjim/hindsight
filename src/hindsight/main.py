@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import APIRouter, Depends, FastAPI
 from fastapi.routing import APIRoute
 
+from hindsight import api
 from hindsight.auth import require_service_token
 from hindsight.config import get_settings
 from hindsight.db import get_engine
@@ -33,4 +34,5 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+v1.include_router(api.router)
 app.include_router(v1)

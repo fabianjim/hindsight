@@ -18,6 +18,7 @@ from hindsight.llm import UserContext
 from hindsight.spend import BudgetMiddleware
 from hindsight.tracing import trace_callbacks
 from hindsight.vocab import Emotion, EntryType, Horizon, IdeaSource
+from hindsight.wire import WireModel
 
 PROMPT_VERSION = "entry-insight-v1"
 PROMPT = (Path(__file__).parent / "prompts" / "entry_insight.md").read_text()
@@ -27,7 +28,7 @@ ALLOWANCE_MICROS = 10_000
 Ticker = Annotated[str, StringConstraints(pattern=r"^[A-Z][A-Z0-9.\-]{0,9}$")]
 
 
-class EntryInput(BaseModel):
+class EntryInput(WireModel):
     model_config = ConfigDict(frozen=True)
 
     id: int
@@ -55,12 +56,12 @@ class Extraction(BaseModel):
     themes: list[str] = Field(max_length=5)
 
 
-class Claim(BaseModel):
+class Claim(WireModel):
     summary: str
     citations: list[Citation] = Field(min_length=1)
 
 
-class EntryInsight(BaseModel):
+class EntryInsight(WireModel):
     thesis: Claim | None
     exit_condition: Claim | None
     horizon: Horizon | None

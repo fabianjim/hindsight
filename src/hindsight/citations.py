@@ -1,13 +1,13 @@
 import re
 from collections.abc import Iterable, Mapping
 
-from pydantic import BaseModel
+from hindsight.wire import WireModel
 
 MIN_QUOTE_CHARS = 3
 MAX_QUOTE_CHARS = 300
 
 
-class Citation(BaseModel):
+class Citation(WireModel):
     entry_id: int
     quote: str
 

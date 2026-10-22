@@ -1,4 +1,273 @@
 {
+  "components": {
+    "schemas": {
+      "Citation": {
+        "properties": {
+          "entryId": {
+            "title": "Entryid",
+            "type": "integer"
+          },
+          "quote": {
+            "title": "Quote",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entryId",
+          "quote"
+        ],
+        "title": "Citation",
+        "type": "object"
+      },
+      "Claim": {
+        "properties": {
+          "citations": {
+            "items": {
+              "$ref": "#/components/schemas/Citation"
+            },
+            "minItems": 1,
+            "title": "Citations",
+            "type": "array"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "summary",
+          "citations"
+        ],
+        "title": "Claim",
+        "type": "object"
+      },
+      "Emotion": {
+        "enum": [
+          "confident",
+          "excited",
+          "curious",
+          "calm",
+          "uncertain",
+          "anxious",
+          "fomo",
+          "regret",
+          "relieved",
+          "frustrated"
+        ],
+        "title": "Emotion",
+        "type": "string"
+      },
+      "EntryInsight": {
+        "properties": {
+          "conviction": {
+            "anyOf": [
+              {
+                "enum": [
+                  1,
+                  2,
+                  3,
+                  4,
+                  5
+                ],
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conviction"
+          },
+          "emotions": {
+            "items": {
+              "$ref": "#/components/schemas/Emotion"
+            },
+            "title": "Emotions",
+            "type": "array"
+          },
+          "exitCondition": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Claim"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "horizon": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Horizon"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ideaSource": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IdeaSource"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "themes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Themes",
+            "type": "array"
+          },
+          "thesis": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Claim"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tickers": {
+            "items": {
+              "pattern": "^[A-Z][A-Z0-9.\\-]{0,9}$",
+              "type": "string"
+            },
+            "title": "Tickers",
+            "type": "array"
+          }
+        },
+        "required": [
+          "thesis",
+          "exitCondition",
+          "horizon",
+          "conviction",
+          "emotions",
+          "ideaSource",
+          "tickers",
+          "themes"
+        ],
+        "title": "EntryInsight",
+        "type": "object"
+      },
+      "EntryInsightItem": {
+        "properties": {
+          "entryId": {
+            "title": "Entryid",
+            "type": "integer"
+          },
+          "insight": {
+            "$ref": "#/components/schemas/EntryInsight"
+          }
+        },
+        "required": [
+          "entryId",
+          "insight"
+        ],
+        "title": "EntryInsightItem",
+        "type": "object"
+      },
+      "EntryInsightList": {
+        "properties": {
+          "insights": {
+            "items": {
+              "$ref": "#/components/schemas/EntryInsightItem"
+            },
+            "title": "Insights",
+            "type": "array"
+          }
+        },
+        "required": [
+          "insights"
+        ],
+        "title": "EntryInsightList",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "Horizon": {
+        "enum": [
+          "days",
+          "weeks",
+          "months",
+          "years"
+        ],
+        "title": "Horizon",
+        "type": "string"
+      },
+      "IdeaSource": {
+        "enum": [
+          "own_research",
+          "news",
+          "social_media",
+          "friend_or_family",
+          "professional"
+        ],
+        "title": "IdeaSource",
+        "type": "string"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "scheme": "bearer",
+        "type": "http"
+      }
+    }
+  },
   "info": {
     "title": "hindsight",
     "version": "0.1.0"
@@ -25,6 +294,64 @@
           }
         },
         "summary": "Health"
+      }
+    },
+    "/v1/users/{userId}/insights": {
+      "get": {
+        "operationId": "list_insights",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "schema": {
+              "title": "Userid",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "entryIds",
+            "required": true,
+            "schema": {
+              "items": {
+                "type": "integer"
+              },
+              "maxItems": 200,
+              "minItems": 1,
+              "title": "Entryids",
+              "type": "array"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntryInsightList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Insights"
       }
     }
   }
