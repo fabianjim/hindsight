@@ -1,8 +1,26 @@
-from fastapi import FastAPI
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 
-app = FastAPI(title="hindsight")
+from fastapi import APIRouter, Depends, FastAPI
+
+from hindsight.auth import require_service_token
+from hindsight.config import get_settings
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncGenerator[None]:
+    get_settings()  # fail fast on missing config
+    yield
+
+
+app = FastAPI(title="hindsight", lifespan=lifespan)
+
+v1 = APIRouter(prefix="/v1", dependencies=[Depends(require_service_token)])
 
 
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+app.include_router(v1)
