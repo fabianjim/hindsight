@@ -1,3 +1,4 @@
+import uuid
 from dataclasses import dataclass
 
 from langchain.chat_models import init_chat_model
@@ -9,6 +10,7 @@ from hindsight.config import get_settings
 @dataclass(frozen=True)
 class UserContext:
     user_id: int
+    generation_id: uuid.UUID
 
 
 def get_chat_model() -> BaseChatModel:

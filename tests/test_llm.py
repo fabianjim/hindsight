@@ -1,3 +1,5 @@
+import uuid
+
 import pytest
 from langchain.agents import create_agent
 from langchain.tools import ToolRuntime, tool
@@ -29,7 +31,8 @@ def test_tools_only_see_the_user_from_context() -> None:
     agent = create_agent(model, tools=[list_entries], context_schema=UserContext)
 
     result = agent.invoke(
-        {"messages": [HumanMessage("what did i write?")]}, context=UserContext(user_id=1)
+        {"messages": [HumanMessage("what did i write?")]},
+        context=UserContext(user_id=1, generation_id=uuid.uuid4()),
     )
 
     [tool_message] = [m for m in result["messages"] if isinstance(m, ToolMessage)]

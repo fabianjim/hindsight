@@ -1,12 +1,10 @@
 import asyncio
 import uuid
-from collections.abc import AsyncIterator
 from datetime import UTC, date, datetime, timedelta
 
 import pytest
 from sqlalchemy import func, select, text
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.pool import NullPool
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from hindsight.budget import BudgetError, BudgetLedger, Limits, total_charged
 from hindsight.models import Generation, Status
@@ -24,16 +22,6 @@ class Clock:
 
     def __call__(self) -> datetime:
         return self.now
-
-
-@pytest.fixture
-async def sessions(database_url: str) -> AsyncIterator[Sessions]:
-    engine = create_async_engine(database_url, poolclass=NullPool)
-    async with engine.begin() as connection:
-        await connection.execute(text("truncate ai.calls, ai.generations, ai.budget"))
-        await connection.execute(text("insert into ai.budget (id, blocked) values (1, false)"))
-    yield async_sessionmaker(engine, expire_on_commit=False)
-    await engine.dispose()
 
 
 @pytest.fixture
