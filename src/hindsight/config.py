@@ -15,6 +15,10 @@ class Settings(BaseSettings):
     langfuse_secret_key: SecretStr | None = None
     langfuse_base_url: str = "https://us.cloud.langfuse.com"
     langfuse_environment: str = "development"
+    # -1 means uncapped
+    lifetime_budget_micros: int = Field(default=-1, ge=-1)
+    daily_budget_micros: int = Field(default=100_000, ge=0)
+    daily_generations: int = Field(default=100, ge=0)
 
     @property
     def tracing_enabled(self) -> bool:
