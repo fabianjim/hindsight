@@ -12,6 +12,7 @@ dependencies = [
     "fastapi[standard]>=0.161.0",
     "langchain>=1.4.7",
     "langchain-openai>=1.7.2",
+    "langfuse>=5.0.4",
     "psycopg[binary]>=3.3.6",
     "pydantic-settings>=2.16.1",
     "sqlalchemy[asyncio]>=2.1.6",

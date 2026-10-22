@@ -7,12 +7,15 @@ from fastapi.routing import APIRoute
 from hindsight.auth import require_service_token
 from hindsight.config import get_settings
 from hindsight.db import get_engine
+from hindsight.tracing import init_tracing
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncGenerator[None]:
-    get_settings()  # fail fast on missing config
+    langfuse = init_tracing(get_settings())
     yield
+    if langfuse:
+        langfuse.shutdown()
     await get_engine().dispose()
 
 
