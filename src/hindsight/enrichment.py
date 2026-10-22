@@ -3,7 +3,6 @@ import json
 import secrets
 from dataclasses import dataclass
 from datetime import datetime
-from enum import StrEnum
 from pathlib import Path
 from typing import Annotated, Literal
 
@@ -18,6 +17,7 @@ from hindsight.citations import Citation, verified
 from hindsight.llm import UserContext
 from hindsight.spend import BudgetMiddleware
 from hindsight.tracing import trace_callbacks
+from hindsight.vocab import Emotion, EntryType, Horizon, IdeaSource
 
 PROMPT_VERSION = "entry-insight-v1"
 PROMPT = (Path(__file__).parent / "prompts" / "entry_insight.md").read_text()
@@ -25,42 +25,6 @@ MAX_OUTPUT_TOKENS = 512
 ALLOWANCE_MICROS = 10_000
 
 Ticker = Annotated[str, StringConstraints(pattern=r"^[A-Z][A-Z0-9.\-]{0,9}$")]
-
-
-class EntryType(StrEnum):
-    BUY = "BUY"
-    SELL = "SELL"
-    INSIGHT = "INSIGHT"
-    MARKET_EVENT = "MARKET_EVENT"
-    REFLECTION = "REFLECTION"
-
-
-class Horizon(StrEnum):
-    DAYS = "days"
-    WEEKS = "weeks"
-    MONTHS = "months"
-    YEARS = "years"
-
-
-class Emotion(StrEnum):
-    CONFIDENT = "confident"
-    EXCITED = "excited"
-    CURIOUS = "curious"
-    CALM = "calm"
-    UNCERTAIN = "uncertain"
-    ANXIOUS = "anxious"
-    FOMO = "fomo"
-    REGRET = "regret"
-    RELIEVED = "relieved"
-    FRUSTRATED = "frustrated"
-
-
-class IdeaSource(StrEnum):
-    OWN_RESEARCH = "own_research"
-    NEWS = "news"
-    SOCIAL_MEDIA = "social_media"
-    FRIEND_OR_FAMILY = "friend_or_family"
-    PROFESSIONAL = "professional"
 
 
 class EntryInput(BaseModel):

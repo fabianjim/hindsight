@@ -14,17 +14,14 @@ from hindsight.budget import BudgetError, BudgetLedger, Limits
 from hindsight.citations import Citation
 from hindsight.enrichment import (
     Claim,
-    Emotion,
     EntryEnricher,
     EntryInput,
-    EntryType,
     Extraction,
-    Horizon,
-    IdeaSource,
     input_hash,
     render,
 )
 from hindsight.models import Generation, Status
+from hindsight.vocab import Emotion, EntryType, Horizon, IdeaSource
 from tests.fakes import FakeToolModel
 
 pytestmark = pytest.mark.anyio

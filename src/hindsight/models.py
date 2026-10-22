@@ -1,10 +1,25 @@
 import uuid
 from datetime import date, datetime
 from enum import StrEnum
+from typing import Any
 
-from sqlalchemy import BigInteger, CheckConstraint, DateTime, Enum, ForeignKey, MetaData, String
+from sqlalchemy import (
+    BigInteger,
+    CheckConstraint,
+    DateTime,
+    Enum,
+    ForeignKey,
+    MetaData,
+    SmallInteger,
+    String,
+    Text,
+    func,
+)
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.schema import UniqueConstraint
+
+from hindsight.vocab import Horizon, IdeaSource
 
 SCHEMA = "ai"
 
@@ -38,8 +53,20 @@ class Status(StrEnum):
     UNKNOWN = "unknown"
 
 
-def status_values(statuses: type[Status]) -> list[str]:
-    return [s.value for s in statuses]
+def enum_values(members: type[StrEnum]) -> list[str]:
+    return [m.value for m in members]
+
+
+def text_enum(members: type[StrEnum], name: str) -> Enum:
+    # varchar plus a check constraint, so adding a value is a plain migration
+    return Enum(
+        members,
+        name=name,
+        native_enum=False,
+        create_constraint=True,
+        length=16,
+        values_callable=enum_values,
+    )
 
 
 class Generation(Base):
@@ -47,16 +74,7 @@ class Generation(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     request_key: Mapped[str] = mapped_column(String(64), unique=True)
-    status: Mapped[Status] = mapped_column(
-        Enum(
-            Status,
-            name="status",
-            native_enum=False,
-            create_constraint=True,
-            length=16,
-            values_callable=status_values,
-        )
-    )
+    status: Mapped[Status] = mapped_column(text_enum(Status, "status"))
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     budget_day: Mapped[date] = mapped_column(index=True)
     reserved_micros: Mapped[int] = mapped_column(BigInteger)
@@ -73,3 +91,25 @@ class Call(Base):
     reserved_micros: Mapped[int] = mapped_column(BigInteger)
     charged_micros: Mapped[int] = mapped_column(BigInteger)
     settled: Mapped[bool] = mapped_column(default=False)
+
+
+class EntryInsightRecord(Base):
+    __tablename__ = "entry_insights"
+    __table_args__ = (CheckConstraint("conviction between 1 and 5", name="conviction"),)
+
+    # vestry's entry id; no foreign key since vestry owns that table
+    entry_id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False)
+    user_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    input_hash: Mapped[str] = mapped_column(String(64))
+    model: Mapped[str] = mapped_column(Text)
+    prompt_version: Mapped[str] = mapped_column(Text)
+    thesis: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    exit_condition: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    horizon: Mapped[Horizon | None] = mapped_column(text_enum(Horizon, "horizon"))
+    conviction: Mapped[int | None] = mapped_column(SmallInteger)
+    idea_source: Mapped[IdeaSource | None] = mapped_column(text_enum(IdeaSource, "idea_source"))
+    emotions: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default="{}")
+    tickers: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default="{}")
+    themes: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default="{}")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
