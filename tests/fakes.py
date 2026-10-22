@@ -14,6 +14,7 @@ from pydantic import Field
 class FakeToolModel(GenericFakeChatModel):
     # kwargs each call received, e.g. max_tokens bound by middleware
     calls: list[dict[str, Any]] = Field(default_factory=list[dict[str, Any]])
+    prompts: list[list[BaseMessage]] = Field(default_factory=list[list[BaseMessage]])
 
     def bind_tools(
         self, tools: Sequence[dict[str, Any] | type | Callable[..., Any] | BaseTool], **kwargs: Any
@@ -28,4 +29,5 @@ class FakeToolModel(GenericFakeChatModel):
         **kwargs: Any,
     ) -> ChatResult:
         self.calls.append(kwargs)
+        self.prompts.append(messages)
         return super()._generate(messages, stop, run_manager, **kwargs)
