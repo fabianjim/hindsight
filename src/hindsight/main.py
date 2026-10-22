@@ -2,6 +2,7 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from fastapi import APIRouter, Depends, FastAPI
+from fastapi.routing import APIRoute
 
 from hindsight.auth import require_service_token
 from hindsight.config import get_settings
@@ -15,7 +16,11 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None]:
     await get_engine().dispose()
 
 
-app = FastAPI(title="hindsight", lifespan=lifespan)
+def operation_id(route: APIRoute) -> str:
+    return route.name
+
+
+app = FastAPI(title="hindsight", lifespan=lifespan, generate_unique_id_function=operation_id)
 
 v1 = APIRouter(prefix="/v1", dependencies=[Depends(require_service_token)])
 
