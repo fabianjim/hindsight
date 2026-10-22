@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="HINDSIGHT_", env_file=".env", extra="ignore")
 
     service_token: SecretStr = Field(min_length=32)
+    database_url: SecretStr
 
 
 @lru_cache

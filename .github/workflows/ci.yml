@@ -37,6 +37,36 @@ jobs:
       - name: Test
         run: uv run pytest
 
+  migrations:
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: supabase/postgres:17.6.1.155
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 54322:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -h localhost"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      HINDSIGHT_SERVICE_TOKEN: ci-token-not-secret-0123456789abcdef
+      HINDSIGHT_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:54322/postgres
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          enable-cache: true
+
+      - name: Apply migrations
+        run: uv run alembic upgrade head
+
+      - name: Check models match migrations
+        run: uv run alembic check
+
   docker:
     runs-on: ubuntu-latest
     steps:

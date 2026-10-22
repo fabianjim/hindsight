@@ -5,12 +5,14 @@ from fastapi import APIRouter, Depends, FastAPI
 
 from hindsight.auth import require_service_token
 from hindsight.config import get_settings
+from hindsight.db import get_engine
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncGenerator[None]:
     get_settings()  # fail fast on missing config
     yield
+    await get_engine().dispose()
 
 
 app = FastAPI(title="hindsight", lifespan=lifespan)
