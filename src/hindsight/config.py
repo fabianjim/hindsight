@@ -9,6 +9,8 @@ class Settings(BaseSettings):
 
     service_token: SecretStr = Field(min_length=32)
     database_url: SecretStr
+    chat_model: str = "openai:gpt-4.1-mini-2025-04-14"
+    openai_api_key: SecretStr | None = None
 
 
 @lru_cache
