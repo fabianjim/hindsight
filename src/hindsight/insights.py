@@ -1,6 +1,6 @@
 from collections.abc import Iterable
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -43,6 +43,12 @@ class InsightStore:
         ).returning(EntryInsightRecord.entry_id)
         async with self._sessions.begin() as session:
             return await session.scalar(statement) is not None
+
+    async def delete(self, entry_id: int) -> None:
+        async with self._sessions.begin() as session:
+            await session.execute(
+                delete(EntryInsightRecord).where(EntryInsightRecord.entry_id == entry_id)
+            )
 
     async def for_user(self, user_id: int, entry_ids: Iterable[int]) -> dict[int, EntryInsight]:
         async with self._sessions() as session:

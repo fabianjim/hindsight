@@ -33,7 +33,7 @@ class EntryInput(WireModel):
 
     id: int
     entry_type: EntryType
-    body: str = Field(min_length=1, max_length=2000)
+    body: str = Field(max_length=2000)
     ticker: str | None = None
     timestamp: datetime
     price_snapshot: float | None = None
@@ -93,7 +93,12 @@ class EntryEnricher:
             middleware=[BudgetMiddleware(ledger, model_name, "extract", MAX_OUTPUT_TOKENS)],
         )
 
+    def hash_of(self, entry: EntryInput) -> str:
+        return input_hash(render(entry), self._model_name)
+
     async def enrich(self, entry: EntryInput, user_id: int) -> Enrichment:
+        if not entry.body.strip():
+            raise ValueError("entry has no text to read")
         message = render(entry)
         # a fresh key per attempt: the ledger never replays a key, and a retry must stay possible
         job = await self._ledger.start(secrets.token_hex(32), ALLOWANCE_MICROS)
