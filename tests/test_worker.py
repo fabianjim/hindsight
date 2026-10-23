@@ -29,6 +29,10 @@ class Handler:
         return Outcome.SAVED
 
 
+async def no_sweep() -> object:
+    raise AssertionError("sweep not expected")
+
+
 async def always() -> bool:
     return True
 
@@ -42,7 +46,7 @@ def worker(
 ) -> Worker:
     # visibility 0 makes a failed message readable again on the next pass
     queue = PgmqQueue(sessions, visibility_seconds=0, poll_seconds=1)
-    return Worker(queue, handle, ready, asyncio.Event(), pause_seconds=0)
+    return Worker(queue, handle, no_sweep, ready, asyncio.Event(), pause_seconds=0)
 
 
 async def send(sessions: Sessions, *bodies: object) -> None:
@@ -126,7 +130,7 @@ async def test_stop_leaves_the_rest_of_the_batch(sessions: Sessions) -> None:
 
     await send(sessions, {"entryId": 7}, {"entryId": 8})
     queue = PgmqQueue(sessions, visibility_seconds=0, poll_seconds=1)
-    consumer = Worker(queue, handle, always, asyncio.Event(), pause_seconds=0)
+    consumer = Worker(queue, handle, no_sweep, always, asyncio.Event(), pause_seconds=0)
 
     await asyncio.wait_for(consumer.run(), timeout=5)
 
@@ -149,7 +153,7 @@ def test_rejects_a_poll_that_would_never_read() -> None:
 
 
 async def test_queue_outage_does_not_crash_the_loop() -> None:
-    consumer = Worker(BrokenQueue(), Handler(), always, asyncio.Event(), pause_seconds=0)
+    consumer = Worker(BrokenQueue(), Handler(), no_sweep, always, asyncio.Event(), pause_seconds=0)
 
     await consumer.run_once()
 
@@ -176,7 +180,25 @@ async def test_events_flow_through_to_saved_insights(sessions: Sessions) -> None
         return await process_entry(entry_id, pipeline.source, pipeline.store, pipeline.enricher)
 
     queue = PgmqQueue(sessions, visibility_seconds=0, poll_seconds=1)
-    await Worker(queue, handle, always, asyncio.Event(), pause_seconds=0).run_once()
+    await Worker(queue, handle, no_sweep, always, asyncio.Event(), pause_seconds=0).run_once()
 
     assert await pipeline.tickers() == ["NVDA"]
     assert await counts(sessions) == (0, 0)
+
+
+async def test_sweep_message_runs_the_sweep(sessions: Sessions) -> None:
+    sweeps: list[str] = []
+
+    async def sweep() -> object:
+        sweeps.append("ran")
+        return None
+
+    handle = Handler()
+    await send(sessions, {"sweep": "entries"}, {"sweep": "everything"})
+    queue = PgmqQueue(sessions, visibility_seconds=0, poll_seconds=1)
+
+    await Worker(queue, handle, sweep, always, asyncio.Event(), pause_seconds=0).run_once()
+
+    assert sweeps == ["ran"]
+    assert handle.seen == []
+    assert await counts(sessions) == (0, 1)

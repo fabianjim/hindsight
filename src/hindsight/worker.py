@@ -4,9 +4,9 @@ import logging
 import signal
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import Any, Protocol
+from typing import Any, Literal, Protocol
 
-from pydantic import ValidationError
+from pydantic import TypeAdapter, ValidationError
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -17,6 +17,7 @@ from hindsight.enrichment import EntryEnricher
 from hindsight.insights import InsightStore
 from hindsight.llm import get_chat_model
 from hindsight.pipeline import EntrySource, process_entry
+from hindsight.sweep import Sweeper
 from hindsight.tracing import init_tracing
 from hindsight.wire import WireModel
 
@@ -33,6 +34,14 @@ log = logging.getLogger("hindsight.worker")
 
 class EntryEvent(WireModel):
     entry_id: int
+
+
+# sent hourly by pg_cron
+class SweepEvent(WireModel):
+    sweep: Literal["entries"]
+
+
+EVENT = TypeAdapter[EntryEvent | SweepEvent](EntryEvent | SweepEvent)
 
 
 @dataclass(frozen=True)
@@ -97,12 +106,14 @@ class Worker:
         self,
         queue: MessageQueue,
         handle: Callable[[int], Awaitable[object]],
+        sweep: Callable[[], Awaitable[object]],
         ready: Callable[[], Awaitable[bool]],
         stop: asyncio.Event,
         pause_seconds: float = PAUSE_SECONDS,
     ) -> None:
         self._queue = queue
         self._handle = handle
+        self._sweep = sweep
         self._ready = ready
         self._stop = stop
         self._pause_seconds = pause_seconds
@@ -134,27 +145,27 @@ class Worker:
             await self._queue.archive(message.id)
             return True
         try:
-            event = EntryEvent.model_validate(message.body)
+            event = EVENT.validate_python(message.body)
         except ValidationError:
             log.warning("message %d is malformed, dead-lettered", message.id)
             await self._queue.archive(message.id)
             return True
+        subject = f"entry {event.entry_id}" if isinstance(event, EntryEvent) else "sweep"
         try:
-            outcome = await self._handle(event.entry_id)
+            if isinstance(event, EntryEvent):
+                outcome = await self._handle(event.entry_id)
+            else:
+                outcome = await self._sweep()
         except BudgetError:
-            log.info("budget refused entry %d, pausing", event.entry_id)
+            log.info("budget refused %s, pausing", subject)
             await self._pause(self._pause_seconds)
             return False
         except Exception as error:
-            log.warning(
-                "entry %d failed (%s) on read %d",
-                event.entry_id,
-                type(error).__name__,
-                message.reads,
-            )
+            log.warning("%s failed (%s) on read %d", subject, type(error).__name__, message.reads)
             return True
         await self._queue.delete(message.id)
-        log.info("entry %d %s", event.entry_id, outcome)
+        if isinstance(event, EntryEvent):
+            log.info("%s %s", subject, outcome)
         return True
 
     async def _pause(self, seconds: float) -> None:
@@ -179,9 +190,11 @@ async def main() -> None:
     async def handle(entry_id: int) -> object:
         return await process_entry(entry_id, source, store, enricher)
 
+    sweeper = Sweeper(sessions, enricher.hash_of, QUEUE)
+
     log.info("worker started")
     try:
-        await Worker(PgmqQueue(sessions), handle, ledger.can_start, stop).run()
+        await Worker(PgmqQueue(sessions), handle, sweeper.run, ledger.can_start, stop).run()
     finally:
         if langfuse:
             langfuse.shutdown()

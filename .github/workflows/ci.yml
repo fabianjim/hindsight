@@ -79,6 +79,13 @@ jobs:
       - name: Check models match migrations
         run: uv run alembic check
 
+      - name: Check the sweep is scheduled
+        env:
+          PGPASSWORD: postgres
+        run: >-
+          test "$(psql -h localhost -p 54322 -U postgres -tAc
+          "select count(*) from cron.job where jobname = 'hindsight-entry-sweep'")" = 1
+
   docker:
     runs-on: ubuntu-latest
     steps:

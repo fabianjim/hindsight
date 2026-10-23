@@ -3,7 +3,7 @@ from enum import StrEnum
 from typing import Protocol
 
 import openai
-from sqlalchemy import exc, text
+from sqlalchemy import RowMapping, exc, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from hindsight.budget import BudgetError
@@ -27,9 +27,11 @@ TRANSIENT_ERRORS = (
 )
 
 # vestry owns this view; its columns are part of the contract between the repos
-ENTRY_QUERY = text(
-    "select id, user_id, entry_type, body, ticker, timestamp, price_snapshot, tags"
-    " from core_read.journal_entries where id = :id"
+ENTRY_COLUMNS = "id, user_id, entry_type, body, ticker, timestamp, price_snapshot, tags"
+ENTRY_QUERY = text(f"select {ENTRY_COLUMNS} from core_read.journal_entries where id = :id")
+PAGE_QUERY = text(
+    f"select {ENTRY_COLUMNS} from core_read.journal_entries"
+    " where id > :after order by id limit :limit"
 )
 
 
@@ -50,18 +52,25 @@ class EntrySource:
     async def get(self, entry_id: int) -> SourceEntry | None:
         async with self._sessions() as session:
             row = (await session.execute(ENTRY_QUERY, {"id": entry_id})).mappings().first()
-        if row is None:
-            return None
-        entry = EntryInput(
-            id=row["id"],
-            entry_type=row["entry_type"],
-            body=row["body"],
-            ticker=row["ticker"],
-            timestamp=row["timestamp"],
-            price_snapshot=row["price_snapshot"],
-            tags=row["tags"] or [],
-        )
-        return SourceEntry(user_id=row["user_id"], entry=entry)
+        return to_source_entry(row) if row else None
+
+    async def page(self, after: int, limit: int) -> list[SourceEntry]:
+        async with self._sessions() as session:
+            rows = await session.execute(PAGE_QUERY, {"after": after, "limit": limit})
+            return [to_source_entry(row) for row in rows.mappings()]
+
+
+def to_source_entry(row: RowMapping) -> SourceEntry:
+    entry = EntryInput(
+        id=row["id"],
+        entry_type=row["entry_type"],
+        body=row["body"],
+        ticker=row["ticker"],
+        timestamp=row["timestamp"],
+        price_snapshot=row["price_snapshot"],
+        tags=row["tags"] or [],
+    )
+    return SourceEntry(user_id=row["user_id"], entry=entry)
 
 
 class Outcome(StrEnum):

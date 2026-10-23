@@ -49,6 +49,26 @@ class InsightStore:
             for table in (EntryInsightRecord, EntryFailureRecord):
                 await session.execute(delete(table).where(table.entry_id == entry_id))
 
+    async def hashes(self, entry_ids: Iterable[int]) -> dict[int, str]:
+        async with self._sessions() as session:
+            rows = await session.execute(
+                select(EntryInsightRecord.entry_id, EntryInsightRecord.input_hash).where(
+                    EntryInsightRecord.entry_id.in_(list(entry_ids))
+                )
+            )
+            return {row.entry_id: row.input_hash for row in rows}
+
+    async def failure_counts(self, entry_ids: Iterable[int]) -> dict[int, tuple[str, int]]:
+        async with self._sessions() as session:
+            rows = await session.execute(
+                select(
+                    EntryFailureRecord.entry_id,
+                    EntryFailureRecord.input_hash,
+                    EntryFailureRecord.failures,
+                ).where(EntryFailureRecord.entry_id.in_(list(entry_ids)))
+            )
+            return {row.entry_id: (row.input_hash, row.failures) for row in rows}
+
     async def failures(self, entry_id: int, input_hash: str) -> int:
         async with self._sessions() as session:
             count = await session.scalar(
