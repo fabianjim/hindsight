@@ -20,6 +20,8 @@ TRUNCATED = [
     "ai.budget",
     "ai.entry_insights",
     "core_read.journal_entries",
+    "pgmq.q_entry_events",
+    "pgmq.a_entry_events",
 ]
 CORE_READ_DDL = """
 create schema core_read;
