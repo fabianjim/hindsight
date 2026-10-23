@@ -43,6 +43,9 @@ create table core_read.journal_entries (
 def settings_env(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     monkeypatch.setenv("HINDSIGHT_SERVICE_TOKEN", SERVICE_TOKEN)
     monkeypatch.setenv("HINDSIGHT_DATABASE_URL", f"{SERVER_URL}/postgres")
+    # env beats .env, so a developer's real keys never reach tests
+    for key in ("OPENAI_API_KEY", "LANGFUSE_PUBLIC_KEY", "LANGFUSE_SECRET_KEY"):
+        monkeypatch.setenv(f"HINDSIGHT_{key}", "")
     get_settings.cache_clear()
     yield
     get_settings.cache_clear()

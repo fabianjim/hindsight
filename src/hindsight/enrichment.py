@@ -79,6 +79,8 @@ class Enrichment:
     input_hash: str
     model: str
     prompt_version: str
+    # the model's answer before grounding, for evals
+    extraction: Extraction | None = None
 
 
 class EntryEnricher:
@@ -120,6 +122,7 @@ class EntryEnricher:
             input_hash=input_hash(message, self._model_name),
             model=self._model_name,
             prompt_version=PROMPT_VERSION,
+            extraction=extraction,
         )
 
 
