@@ -2,11 +2,29 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Protocol
 
-from sqlalchemy import text
+import openai
+from sqlalchemy import exc, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from hindsight.budget import BudgetError
 from hindsight.enrichment import EntryEnricher, EntryInput
 from hindsight.insights import InsightStore
+
+# failures of the same text before it's treated as poison and never tried again
+POISON_AFTER = 3
+
+# outages and infrastructure, not the entry; the queue and sweep retry these freely.
+# the sdk wraps transport failures in these classes, langchain's included
+# provider-specific: update when switching providers
+TRANSIENT_ERRORS = (
+    openai.APIConnectionError,
+    openai.RateLimitError,
+    openai.InternalServerError,
+    exc.OperationalError,
+    exc.InterfaceError,
+    ConnectionError,
+    TimeoutError,
+)
 
 # vestry owns this view; its columns are part of the contract between the repos
 ENTRY_QUERY = text(
@@ -51,6 +69,7 @@ class Outcome(StrEnum):
     UNCHANGED = "unchanged"
     STALE = "stale"
     REMOVED = "removed"
+    POISONED = "poisoned"
 
 
 async def process_entry(
@@ -60,14 +79,25 @@ async def process_entry(
     if found is None or not found.entry.body.strip():
         await store.delete(entry_id)
         return Outcome.REMOVED
-    if await store.current_hash(entry_id) == enricher.hash_of(found.entry):
+    expected = enricher.hash_of(found.entry)
+    if await store.current_hash(entry_id) == expected:
         return Outcome.UNCHANGED
+    if await store.failures(entry_id, expected) >= POISON_AFTER:
+        return Outcome.POISONED
 
-    result = await enricher.enrich(found.entry, found.user_id)
+    try:
+        result = await enricher.enrich(found.entry, found.user_id)
+    except (BudgetError, *TRANSIENT_ERRORS):
+        # not this entry's fault
+        raise
+    except Exception as error:
+        await store.record_failure(entry_id, expected, type(error).__name__)
+        raise
 
     # the entry may have been edited or deleted while the model ran; its own event handles that
     latest = await source.get(entry_id)
     if latest is None or enricher.hash_of(latest.entry) != result.input_hash:
         return Outcome.STALE
     await store.save(result, found.user_id)
+    await store.clear_failures(entry_id)
     return Outcome.SAVED

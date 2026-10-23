@@ -9,6 +9,7 @@ from sqlalchemy import (
     DateTime,
     Enum,
     ForeignKey,
+    Integer,
     MetaData,
     SmallInteger,
     String,
@@ -112,4 +113,15 @@ class EntryInsightRecord(Base):
     tickers: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default="{}")
     themes: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default="{}")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+# paid attempts that raised, per version of an entry's text
+class EntryFailureRecord(Base):
+    __tablename__ = "entry_failures"
+
+    entry_id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False)
+    input_hash: Mapped[str] = mapped_column(String(64))
+    failures: Mapped[int] = mapped_column(Integer)
+    last_error: Mapped[str] = mapped_column(Text)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

@@ -1,11 +1,11 @@
 from collections.abc import Iterable
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import case, delete, func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from hindsight.enrichment import Claim, Enrichment, EntryInsight
-from hindsight.models import EntryInsightRecord
+from hindsight.models import EntryFailureRecord, EntryInsightRecord
 
 
 class InsightStore:
@@ -46,8 +46,41 @@ class InsightStore:
 
     async def delete(self, entry_id: int) -> None:
         async with self._sessions.begin() as session:
+            for table in (EntryInsightRecord, EntryFailureRecord):
+                await session.execute(delete(table).where(table.entry_id == entry_id))
+
+    async def failures(self, entry_id: int, input_hash: str) -> int:
+        async with self._sessions() as session:
+            count = await session.scalar(
+                select(EntryFailureRecord.failures).where(
+                    EntryFailureRecord.entry_id == entry_id,
+                    EntryFailureRecord.input_hash == input_hash,
+                )
+            )
+        return count or 0
+
+    # a new hash means new text, prompt or model, so the count starts over
+    async def record_failure(self, entry_id: int, input_hash: str, error: str) -> None:
+        statement = insert(EntryFailureRecord).values(
+            entry_id=entry_id, input_hash=input_hash, failures=1, last_error=error
+        )
+        same_input = EntryFailureRecord.input_hash == statement.excluded.input_hash
+        statement = statement.on_conflict_do_update(
+            index_elements=[EntryFailureRecord.entry_id],
+            set_={
+                "failures": case((same_input, EntryFailureRecord.failures + 1), else_=1),
+                "input_hash": statement.excluded.input_hash,
+                "last_error": statement.excluded.last_error,
+                "updated_at": func.now(),
+            },
+        )
+        async with self._sessions.begin() as session:
+            await session.execute(statement)
+
+    async def clear_failures(self, entry_id: int) -> None:
+        async with self._sessions.begin() as session:
             await session.execute(
-                delete(EntryInsightRecord).where(EntryInsightRecord.entry_id == entry_id)
+                delete(EntryFailureRecord).where(EntryFailureRecord.entry_id == entry_id)
             )
 
     async def for_user(self, user_id: int, entry_ids: Iterable[int]) -> dict[int, EntryInsight]:

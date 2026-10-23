@@ -50,8 +50,9 @@ Hindsight is the Python AI service behind Vestry, a portfolio journal for reflec
 
 **Spend**
 - Every model call reserves its worst-case cost in `BudgetLedger` before it runs and settles the real cost after. A settlement over the reservation blocks all spending until someone resets `ai.budget.blocked`. Crashed or unsettled work keeps its full reservation.
+- Each version of an entry's text gets at most `POISON_AFTER` (3) failed paid attempts, tracked in `ai.entry_failures` by `input_hash`; after that it's a poison entry and `process_entry` returns `POISONED` without calling the model. Budget refusals, `TRANSIENT_ERRORS` (provider outages, rate limits, timeouts, database connection errors) and errors before the model call never count, so an outage can't poison healthy entries. New text, prompt or model means a new hash and fresh attempts. `TRANSIENT_ERRORS` names OpenAI's exception classes, so update it when switching providers.
 - Every agent gets `BudgetMiddleware`, listed last so it wraps the model directly and each retry reserves again. It caps `max_tokens`, reads the job from `runtime.context.generation_id`, and only implements the async hook, so a sync `invoke` raises instead of skipping the budget.
-- `get_chat_model()` matches vestry's provider settings: no SDK retries (each would be an unreserved charge), 5 s connect / 30 s read timeouts, `store=False`, and only `HINDSIGHT_OPENAI_API_KEY`, never a stray `OPENAI_API_KEY`.
+- `get_chat_model()` matches vestry's provider settings: no SDK retries (each would be an unreserved charge), 5 s connect / 30 s read timeouts, `store=False`, and only `HINDSIGHT_OPENAI_API_KEY`, never a stray `OPENAI_API_KEY`. The OpenAI SDK (3.x) runs on `httpx2`, not `httpx`: use `openai.Timeout` and the SDK's exception classes, never httpx ones.
 - `pricing.PRICES` holds pinned model snapshots only. Changing `HINDSIGHT_CHAT_MODEL` means adding its price; unknown models are refused.
 
 **AI output**

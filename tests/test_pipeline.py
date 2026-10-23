@@ -1,16 +1,20 @@
 import json
 from datetime import UTC, datetime
+from typing import Any
 
+import httpx2
+import openai
 import pytest
-from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessage, BaseMessage
+from langchain_core.outputs import ChatResult
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from hindsight.budget import BudgetLedger, Limits
+from hindsight.budget import BudgetError, BudgetLedger, Limits
 from hindsight.enrichment import EntryEnricher, EntryInput
 from hindsight.insights import InsightStore
 from hindsight.models import Generation
-from hindsight.pipeline import EntrySource, Outcome, SourceEntry, process_entry
+from hindsight.pipeline import POISON_AFTER, EntrySource, Outcome, SourceEntry, process_entry
 from hindsight.vocab import EntryType
 from tests.fakes import FakeToolModel
 
@@ -39,11 +43,38 @@ def reply(ticker: str) -> AIMessage:
     )
 
 
+class Flaky(FakeToolModel):
+    failures_left: int = 0
+    attempts: int = 0
+
+    def failure(self) -> Exception:
+        return RuntimeError("model output failed validation")
+
+    def _generate(self, messages: list[BaseMessage], *args: Any, **kwargs: Any) -> ChatResult:
+        self.attempts += 1
+        if self.failures_left:
+            self.failures_left -= 1
+            raise self.failure()
+        return super()._generate(messages, *args, **kwargs)
+
+
+class Outage(Flaky):
+    def failure(self) -> Exception:
+        return openai.APITimeoutError(request=httpx2.Request("POST", "https://api.openai.com"))
+
+
 class Pipeline:
-    def __init__(self, sessions: Sessions, *tickers: str) -> None:
+    def __init__(
+        self,
+        sessions: Sessions,
+        *tickers: str,
+        fail: int = 0,
+        limits: Limits | None = None,
+        model: type[Flaky] = Flaky,
+    ) -> None:
         self.sessions = sessions
-        self.model = FakeToolModel(messages=iter([reply(t) for t in tickers]))
-        ledger = BudgetLedger(sessions, Limits(-1, 1_000_000, 100))
+        self.model = model(messages=iter([reply(t) for t in tickers]), failures_left=fail)
+        ledger = BudgetLedger(sessions, limits or Limits(-1, 1_000_000, 100))
         self.enricher = EntryEnricher(ledger, self.model, MODEL)
         self.store = InsightStore(sessions)
         self.source = EntrySource(sessions)
@@ -172,3 +203,83 @@ async def test_enrich_refuses_blank_text_before_reserving(sessions: Sessions) ->
     with pytest.raises(ValueError):
         await pipeline.enricher.enrich(version("  ").entry, user_id=1)
     assert await pipeline.jobs() == 0
+
+
+async def failure_row(sessions: Sessions) -> tuple[int, str] | None:
+    async with sessions() as session:
+        row = (
+            await session.execute(text("select failures, last_error from ai.entry_failures"))
+        ).first()
+    return (row.failures, row.last_error) if row else None
+
+
+async def test_text_that_keeps_failing_is_poison(sessions: Sessions) -> None:
+    pipeline = Pipeline(sessions, fail=10)
+    await pipeline.add_entry()
+
+    for _ in range(POISON_AFTER):
+        with pytest.raises(RuntimeError):
+            await pipeline.run()
+
+    assert await pipeline.run() == Outcome.POISONED
+    assert pipeline.model.attempts == POISON_AFTER
+    assert await pipeline.jobs() == POISON_AFTER
+    assert await failure_row(sessions) == (POISON_AFTER, "RuntimeError")
+
+
+async def test_edited_text_gets_fresh_attempts(sessions: Sessions) -> None:
+    pipeline = Pipeline(sessions, "AMD", fail=POISON_AFTER)
+    await pipeline.add_entry()
+    for _ in range(POISON_AFTER):
+        with pytest.raises(RuntimeError):
+            await pipeline.run()
+    await pipeline.write("update core_read.journal_entries set body = 'Switched to AMD.'")
+
+    assert await pipeline.run() == Outcome.SAVED
+    assert await pipeline.tickers() == ["AMD"]
+    assert await failure_row(sessions) is None
+
+
+async def test_success_clears_earlier_failures(sessions: Sessions) -> None:
+    pipeline = Pipeline(sessions, "NVDA", fail=1)
+    await pipeline.add_entry()
+    with pytest.raises(RuntimeError):
+        await pipeline.run()
+    assert await failure_row(sessions) == (1, "RuntimeError")
+
+    assert await pipeline.run() == Outcome.SAVED
+    assert await failure_row(sessions) is None
+
+
+async def test_budget_refusal_is_not_the_entrys_failure(sessions: Sessions) -> None:
+    pipeline = Pipeline(sessions, limits=Limits(-1, 1_000_000, 0))
+    await pipeline.add_entry()
+
+    with pytest.raises(BudgetError):
+        await pipeline.run()
+
+    assert pipeline.model.attempts == 0
+    assert await failure_row(sessions) is None
+
+
+async def test_deleting_an_entry_forgets_its_failures(sessions: Sessions) -> None:
+    pipeline = Pipeline(sessions, fail=1)
+    await pipeline.add_entry()
+    with pytest.raises(RuntimeError):
+        await pipeline.run()
+    await pipeline.write("delete from core_read.journal_entries")
+
+    assert await pipeline.run() == Outcome.REMOVED
+    assert await failure_row(sessions) is None
+
+
+async def test_provider_outage_never_makes_an_entry_poison(sessions: Sessions) -> None:
+    pipeline = Pipeline(sessions, "NVDA", fail=POISON_AFTER + 2, model=Outage)
+    await pipeline.add_entry()
+
+    for _ in range(POISON_AFTER + 2):
+        with pytest.raises(openai.APITimeoutError):
+            await pipeline.run()
+
+    assert await failure_row(sessions) is None
+    assert await pipeline.run() == Outcome.SAVED

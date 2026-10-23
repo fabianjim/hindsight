@@ -108,3 +108,14 @@ async def test_database_rejects_values_outside_the_vocabulary(
     with pytest.raises(IntegrityError):
         async with sessions.begin() as session:
             await session.execute(text(f"update ai.entry_insights set {column} = {value}"))
+
+
+async def test_failure_count_restarts_for_new_input(store: InsightStore) -> None:
+    await store.record_failure(7, "a" * 64, "ConnectionError")
+    await store.record_failure(7, "a" * 64, "ConnectionError")
+    assert await store.failures(7, "a" * 64) == 2
+
+    await store.record_failure(7, "b" * 64, "TimeoutError")
+
+    assert await store.failures(7, "b" * 64) == 1
+    assert await store.failures(7, "a" * 64) == 0

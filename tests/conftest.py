@@ -19,6 +19,7 @@ TRUNCATED = [
     "ai.generations",
     "ai.budget",
     "ai.entry_insights",
+    "ai.entry_failures",
     "core_read.journal_entries",
     "pgmq.q_entry_events",
     "pgmq.a_entry_events",
