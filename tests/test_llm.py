@@ -1,7 +1,7 @@
 import uuid
 from pathlib import Path
 
-import httpx
+import openai
 import pytest
 from langchain.agents import create_agent
 from langchain.tools import ToolRuntime, tool
@@ -57,7 +57,7 @@ def test_builds_configured_model(monkeypatch: pytest.MonkeyPatch) -> None:
     assert model.model_name == "gpt-4.1-mini-2025-04-14"
     for client in (model.root_client, model.root_async_client):
         assert client.max_retries == 0
-        assert client.timeout == httpx.Timeout(30.0, connect=5.0)
+        assert client.timeout == openai.Timeout(30.0, connect=5.0)
     assert model._get_request_payload([HumanMessage("hi")])["store"] is False  # pyright: ignore[reportPrivateUsage]
 
 

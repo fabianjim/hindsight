@@ -1,7 +1,7 @@
 import uuid
 from dataclasses import dataclass
 
-import httpx
+import openai
 from langchain.chat_models import init_chat_model
 from langchain_core.language_models import BaseChatModel
 
@@ -9,7 +9,7 @@ from hindsight.config import get_settings
 
 # no sdk retries: each one would be an extra provider charge inside a single reservation
 MAX_RETRIES = 0
-TIMEOUT = httpx.Timeout(30.0, connect=5.0)
+TIMEOUT = openai.Timeout(30.0, connect=5.0)
 
 
 @dataclass(frozen=True)
