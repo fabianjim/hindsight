@@ -46,7 +46,7 @@ def worker(
 ) -> Worker:
     # visibility 0 makes a failed message readable again on the next pass
     queue = PgmqQueue(sessions, visibility_seconds=0, poll_seconds=1)
-    return Worker(queue, handle, no_sweep, ready, asyncio.Event(), pause_seconds=0)
+    return Worker(queue, handle, no_sweep, ready, asyncio.Event(), pause_seconds=0, retry_seconds=0)
 
 
 async def send(sessions: Sessions, *bodies: object) -> None:
@@ -153,9 +153,40 @@ def test_rejects_a_poll_that_would_never_read() -> None:
 
 
 async def test_queue_outage_does_not_crash_the_loop() -> None:
-    consumer = Worker(BrokenQueue(), Handler(), no_sweep, always, asyncio.Event(), pause_seconds=0)
+    consumer = Worker(BrokenQueue(), Handler(), no_sweep, always, asyncio.Event(), retry_seconds=0)
 
     await consumer.run_once()
+
+
+async def test_budget_check_outage_does_not_crash_the_loop(sessions: Sessions) -> None:
+    async def unreachable() -> bool:
+        raise ConnectionError("database went away")
+
+    handle = Handler()
+    await send(sessions, {"entryId": 7})
+
+    await worker(sessions, handle, ready=unreachable).run_once()
+
+    assert handle.seen == []
+    assert await counts(sessions) == (1, 0)
+
+
+class UndeletableQueue(PgmqQueue):
+    async def delete(self, message_id: int) -> None:
+        raise ConnectionError("database went away")
+
+
+async def test_failed_delete_leaves_the_message_for_a_retry(sessions: Sessions) -> None:
+    handle = Handler()
+    await send(sessions, {"entryId": 7})
+    queue = UndeletableQueue(sessions, visibility_seconds=0, poll_seconds=1)
+    consumer = Worker(queue, handle, no_sweep, always, asyncio.Event(), retry_seconds=0)
+
+    await consumer.run_once()
+    await worker(sessions, handle).run_once()
+
+    assert handle.seen == [7, 7]
+    assert await counts(sessions) == (0, 0)
 
 
 async def test_logs_never_carry_exception_text(

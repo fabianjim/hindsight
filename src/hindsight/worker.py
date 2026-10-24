@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from hindsight.budget import BudgetError, BudgetLedger, Limits
 from hindsight.config import get_settings
 from hindsight.db import get_engine, get_sessionmaker
-from hindsight.enrichment import EntryEnricher
+from hindsight.enrichment import ALLOWANCE_MICROS, EntryEnricher
 from hindsight.insights import InsightStore
 from hindsight.llm import get_chat_model
 from hindsight.pipeline import EntrySource, process_entry
@@ -27,7 +27,7 @@ POLL_SECONDS = 5
 BATCH_SIZE = 10
 MAX_READS = 5
 PAUSE_SECONDS = 600
-RETRY_READ_SECONDS = 5
+RETRY_SECONDS = 5
 
 log = logging.getLogger("hindsight.worker")
 
@@ -110,6 +110,7 @@ class Worker:
         ready: Callable[[], Awaitable[bool]],
         stop: asyncio.Event,
         pause_seconds: float = PAUSE_SECONDS,
+        retry_seconds: float = RETRY_SECONDS,
     ) -> None:
         self._queue = queue
         self._handle = handle
@@ -117,23 +118,27 @@ class Worker:
         self._ready = ready
         self._stop = stop
         self._pause_seconds = pause_seconds
+        self._retry_seconds = retry_seconds
 
     async def run(self) -> None:
         while not self._stop.is_set():
             await self.run_once()
 
     async def run_once(self) -> None:
+        # a database blip pauses the worker instead of killing it; messages wait in the queue
+        try:
+            await self._step()
+        except Exception as error:
+            log.warning("worker step failed (%s), retrying", type(error).__name__)
+            await self._pause(self._retry_seconds)
+
+    async def _step(self) -> None:
         # checked before reading so a spent budget doesn't burn messages' read counts
         if not await self._ready():
             log.info("budget unavailable, pausing")
             await self._pause(self._pause_seconds)
             return
-        try:
-            messages = await self._queue.read()
-        except Exception as error:
-            log.warning("queue read failed (%s)", type(error).__name__)
-            await self._pause(RETRY_READ_SECONDS)
-            return
+        messages = await self._queue.read()
         for message in messages:
             # unprocessed messages reappear once their visibility timeout ends
             if self._stop.is_set() or not await self._process(message):
@@ -190,11 +195,14 @@ async def main() -> None:
     async def handle(entry_id: int) -> object:
         return await process_entry(entry_id, source, store, enricher)
 
+    async def ready() -> bool:
+        return await ledger.can_start(ALLOWANCE_MICROS)
+
     sweeper = Sweeper(sessions, enricher.hash_of, QUEUE)
 
     log.info("worker started")
     try:
-        await Worker(PgmqQueue(sessions), handle, sweeper.run, ledger.can_start, stop).run()
+        await Worker(PgmqQueue(sessions), handle, sweeper.run, ready, stop).run()
     finally:
         if langfuse:
             langfuse.shutdown()

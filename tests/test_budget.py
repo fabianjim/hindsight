@@ -53,7 +53,7 @@ async def job(sessions: Sessions, job_id: uuid.UUID) -> Generation:
 async def test_reserves_before_work_and_deduplicates(
     ledger: BudgetLedger, sessions: Sessions
 ) -> None:
-    assert await ledger.can_start()
+    assert await ledger.can_start(10_000)
     start = await ledger.start(key(1), 10_000)
     assert await charged(sessions) == 10_000
     assert (await job(sessions, start.id)).budget_day == date(2026, 10, 1)
@@ -73,14 +73,15 @@ async def test_reserves_before_work_and_deduplicates(
 
     await ledger.finish(start.id, success=True)
     assert await charged(sessions) == 900
-    assert await ledger.can_start()
+    assert await ledger.can_start(10_000)
     assert (await job(sessions, start.id)).status == Status.SUCCEEDED
     assert not (await ledger.start(key(1), 10_000)).created
 
 
 async def test_concurrent_jobs_share_the_daily_allowance(ledger: BudgetLedger) -> None:
     assert (await ledger.start(key(1), 15_000)).created
-    assert await ledger.can_start()
+    assert await ledger.can_start(5_000)
+    assert not await ledger.can_start(5_001)
     with pytest.raises(BudgetError):
         await ledger.start(key(2), 5_001)
     assert (await ledger.start(key(2), 5_000)).created
@@ -140,7 +141,7 @@ async def test_failures_still_consume_daily_generation_slots(
         await ledger.finish((await ledger.start(key(n), 1_000)).id, success=False)
 
     assert await charged(sessions) == 0
-    assert not await ledger.can_start()
+    assert not await ledger.can_start(1_000)
     with pytest.raises(BudgetError):
         await ledger.start(key(6), 1_000)
 
@@ -171,7 +172,7 @@ async def test_unexpected_overrun_stops_all_spending(
         await ledger.reserve_call(start.id, "other", 1_000)
     await ledger.finish(start.id, success=False)
     assert await charged(sessions) == 4_001
-    assert not await ledger.can_start()
+    assert not await ledger.can_start(1_000)
     with pytest.raises(BudgetError):
         await ledger.start(key(2), 1_000)
 
@@ -182,11 +183,11 @@ async def test_uncapped_lifetime_still_enforces_daily_money(
     ledger = BudgetLedger(sessions, Limits(-1, 20_000, 5), clock)
     for day in range(3):
         clock.now = datetime(2026, 10, 2, 12, tzinfo=UTC) + timedelta(days=day)
-        assert await ledger.can_start()
+        assert await ledger.can_start(20_000)
         start = await ledger.start(key(day + 1), 20_000)
         await ledger.settle_call(await ledger.reserve_call(start.id, "digest", 20_000), 20_000)
         await ledger.finish(start.id, success=True)
-        assert not await ledger.can_start()
+        assert not await ledger.can_start(1)
         with pytest.raises(BudgetError):
             await ledger.start(key(99), 1)
 
@@ -201,7 +202,7 @@ async def test_uncapped_lifetime_still_enforces_daily_generation_count(
         await ledger.finish((await ledger.start(key(n), 1_000)).id, success=False)
 
     assert await charged(sessions) == 0
-    assert not await ledger.can_start()
+    assert not await ledger.can_start(1_000)
     with pytest.raises(BudgetError):
         await ledger.start(key(3), 1_000)
 
@@ -210,7 +211,7 @@ async def test_missing_budget_row_fails_closed(ledger: BudgetLedger, sessions: S
     async with sessions.begin() as session:
         await session.execute(text("delete from ai.budget"))
 
-    assert not await ledger.can_start()
+    assert not await ledger.can_start(1_000)
     with pytest.raises(BudgetError):
         await ledger.start(key(1), 1_000)
     async with sessions() as session:

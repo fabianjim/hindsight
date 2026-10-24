@@ -62,8 +62,8 @@ class BudgetLedger:
         self._limits = limits
         self._clock = clock
 
-    # a hint only; start() enforces exact costs under the lock
-    async def can_start(self) -> bool:
+    # a hint only, with start()'s checks; start() enforces them under the lock
+    async def can_start(self, allowance: int) -> bool:
         async with self._sessions() as session:
             budget = await session.get(Budget, 1)
             if budget is None or budget.blocked:
@@ -71,8 +71,8 @@ class BudgetLedger:
             day = budget_day(self._clock())
             return (
                 await count_on(session, day) < self._limits.daily_generations
-                and self._limits.permits_lifetime_spend(await total_charged(session), 1)
-                and await charged_on(session, day) < self._limits.daily_micros
+                and self._limits.permits_lifetime_spend(await total_charged(session), allowance)
+                and allowance <= self._limits.daily_micros - await charged_on(session, day)
             )
 
     async def start(self, key: str, allowance: int) -> Start:

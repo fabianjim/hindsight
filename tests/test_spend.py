@@ -171,7 +171,7 @@ async def test_overrun_settles_and_blocks_all_spending(
     [call] = await calls_of(sessions)
     assert call.settled
     assert call.charged_micros == 400_000
-    assert not await ledger.can_start()
+    assert not await ledger.can_start(1)
 
 
 async def test_sync_invoke_fails_instead_of_skipping_the_budget(ledger: BudgetLedger) -> None:
