@@ -88,8 +88,28 @@ jobs:
 
   docker:
     runs-on: ubuntu-latest
+    services:
+      db:
+        image: supabase/postgres:17.6.1.155
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 54322:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -h localhost"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Build image
         run: docker build --tag hindsight:ci .
+
+      # the migrate service runs this exact command from the image
+      - name: Migrate from the image
+        run: >-
+          docker run --rm --network host
+          -e HINDSIGHT_SERVICE_TOKEN=ci-token-not-secret-0123456789abcdef
+          -e HINDSIGHT_DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:54322/postgres
+          hindsight:ci sh -c "alembic upgrade head && alembic check"

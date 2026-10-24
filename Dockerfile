@@ -20,7 +20,12 @@ FROM python:3.13-slim-trixie
 
 RUN useradd --system --uid 10001 --no-create-home hindsight
 
+WORKDIR /app
+
 COPY --from=build /app/.venv /app/.venv
+# alembic reads its config from pyproject.toml, so the migrate container runs from here
+COPY pyproject.toml ./
+COPY migrations ./migrations
 
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1
