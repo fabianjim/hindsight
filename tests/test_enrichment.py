@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 import pytest
+from langchain.agents.structured_output import ProviderStrategy
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_core.outputs import ChatResult
 from pydantic import ValidationError
@@ -209,6 +210,22 @@ def test_input_hash_tracks_what_the_model_sees(monkeypatch: pytest.MonkeyPatch) 
 def test_schema_rejects_out_of_range_values(change: dict[str, Any]) -> None:
     with pytest.raises(ValidationError):
         Extraction.model_validate({**EXTRACTION, **change})
+
+
+def test_strict_schema_closes_every_object() -> None:
+    def objects(node: Any) -> list[dict[str, Any]]:
+        if isinstance(node, list):
+            return [found for item in node for found in objects(item)]
+        if not isinstance(node, dict):
+            return []
+        own = [node] if node.get("type") == "object" else []
+        return own + [found for value in node.values() for found in objects(value)]
+
+    kwargs = ProviderStrategy(Extraction, strict=True).to_model_kwargs()
+    found = objects(kwargs["response_format"]["json_schema"]["schema"])
+
+    assert len(found) == 2
+    assert all(o.get("additionalProperties") is False for o in found)
 
 
 def test_schema_accepts_every_documented_value() -> None:

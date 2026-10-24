@@ -40,12 +40,17 @@ class EntryInput(WireModel):
     tags: list[str] = []
 
 
+# openai strict mode requires additionalProperties: false on every object
 class ExtractedClaim(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     summary: str
     quotes: list[str] = Field(max_length=3)
 
 
 class Extraction(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     thesis: ExtractedClaim | None
     exit_condition: ExtractedClaim | None
     horizon: Horizon | None

@@ -61,7 +61,7 @@ Hindsight is the Python AI service behind Vestry, a portfolio journal for reflec
 **AI output**
 - Numbers (returns, P/L, patterns) are computed deterministically. The LLM extracts, narrates and connects, and must cite entry IDs that the server validates.
 - Every AI claim carries `Citation`s (entry ID plus a quote). `citations.verified` keeps only quotes found in the cited entry; a claim left with none is dropped, never stored.
-- Structured output uses `ProviderStrategy(..., strict=True)`. LangChain's default sends `strict: false`, so OpenAI wouldn't enforce the schema.
+- Structured output uses `ProviderStrategy(..., strict=True)`. LangChain's default sends `strict: false`, so OpenAI wouldn't enforce the schema. Strict mode rejects any object without `additionalProperties: false`, so every model-facing model sets `extra="forbid"`.
 - `input_hash` covers the prompt text, the model and the rendered entry, so editing a prompt re-enriches everything. Bump `PROMPT_VERSION` with it.
 
 ## Sibling repo: vestry
