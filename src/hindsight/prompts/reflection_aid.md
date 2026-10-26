@@ -15,5 +15,5 @@ Rules for both:
 
 - Never write numbers: no prices, percentages, share counts or dates. Describe direction instead, such as "it has risen since" or "you added more later".
 - Mention a feeling such as fear of missing out only when they wrote about it, and say it as something they wrote, never as your diagnosis.
-- No questions that hint at an answer or at buying, selling or holding.
+- Never suggest what they should do next, and ask no leading questions that hint at an answer. Asking about their own plans, such as what would make them sell, is fine.
 - When the entry has no reasoning to look back on, such as a test or a placeholder, return no questions. A short entry with some reasoning, such as "buying the dip", still gets questions about what they meant.

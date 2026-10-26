@@ -1,6 +1,7 @@
 import json
 import secrets
 from collections.abc import Callable, Iterable
+from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Literal
@@ -15,7 +16,7 @@ from hindsight.budget import BudgetLedger, budget_day, utcnow
 from hindsight.citations import Citation, verified
 from hindsight.enrichment import Claim, EntryInput
 from hindsight.llm import UserContext
-from hindsight.pricing import price_of
+from hindsight.pricing import Price, price_of
 from hindsight.reflection_aids import ReflectionAid
 from hindsight.spend import REQUEST_OVERHEAD_TOKENS, BudgetMiddleware
 from hindsight.tracing import trace_callbacks
@@ -58,6 +59,12 @@ class Draft(BaseModel):
     questions: list[str] = Field(max_length=3)
 
 
+@dataclass(frozen=True)
+class ReflectionRun:
+    draft: Draft
+    aid: ReflectionAid
+
+
 RESPONSE_FORMAT = ProviderStrategy(Draft, strict=True)
 SCHEMA = json.dumps(RESPONSE_FORMAT.schema_spec.json_schema)
 
@@ -89,12 +96,18 @@ class ReflectionAidGenerator:
     async def generate(
         self, entry: EntryInput, later: Iterable[EntryInput], since: Since, user_id: int
     ) -> ReflectionAid:
+        return (await self.run(entry, later, since, user_id)).aid
+
+    # the model's draft alongside the grounded aid, for evals
+    async def run(
+        self, entry: EntryInput, later: Iterable[EntryInput], since: Since, user_id: int
+    ) -> ReflectionRun:
         if not entry.body.strip():
             raise ValueError("entry has no text to read")
         later = newest_later(entry, later)
         message = render(entry, later, since, budget_day(self._clock()))
         # a fresh key per attempt: the ledger never replays a key, and a retry must stay possible
-        job = await self._ledger.start(secrets.token_hex(32), self.allowance_for(message))
+        job = await self._ledger.start(secrets.token_hex(32), allowance_for(self._price, message))
         success = False
         try:
             result = await self._agent.ainvoke(
@@ -107,12 +120,13 @@ class ReflectionAidGenerator:
         finally:
             await self._ledger.finish(job.id, success)
         assert isinstance(draft, Draft)
-        return ground(draft, later)
+        return ReflectionRun(draft=draft, aid=ground(draft, later))
 
-    # the middleware re-encodes the request as json, which at most doubles each byte
-    def allowance_for(self, message: str) -> int:
-        request_bytes = len((PROMPT + message + SCHEMA).encode())
-        return self._price.cost(2 * request_bytes + REQUEST_OVERHEAD_TOKENS, MAX_OUTPUT_TOKENS)
+
+# the middleware re-encodes the request as json, which at most doubles each byte
+def allowance_for(price: Price, message: str) -> int:
+    request_bytes = len((PROMPT + message + SCHEMA).encode())
+    return price.cost(2 * request_bytes + REQUEST_OVERHEAD_TOKENS, MAX_OUTPUT_TOKENS)
 
 
 def newest_later(entry: EntryInput, later: Iterable[EntryInput]) -> list[EntryInput]:
