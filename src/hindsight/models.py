@@ -116,6 +116,20 @@ class EntryInsightRecord(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+# one per user, new york day and entry; that key order makes counting a user's day a prefix scan
+class ReflectionAidRecord(Base):
+    __tablename__ = "reflection_aids"
+
+    user_id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False)
+    day: Mapped[date] = mapped_column(primary_key=True)
+    entry_id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False)
+    recap: Mapped[list[dict[str, Any]]] = mapped_column(JSONB)
+    questions: Mapped[list[str]] = mapped_column(ARRAY(Text))
+    model: Mapped[str] = mapped_column(Text)
+    prompt_version: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 # paid attempts that raised, per version of an entry's text
 class EntryFailureRecord(Base):
     __tablename__ = "entry_failures"

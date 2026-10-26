@@ -110,6 +110,24 @@ async def test_removes_insights_whose_entry_is_gone(sessions: Sessions) -> None:
     assert (report.orphans_removed, report.orphans_held) == (2, 0)
 
 
+async def test_removes_reflection_aids_whose_entry_is_gone(sessions: Sessions) -> None:
+    pipeline = Pipeline(sessions)
+    await pipeline.add_entry(entry_id=1)
+    for entry_id in (1, 99):
+        await pipeline.write(
+            "insert into ai.reflection_aids"
+            " (user_id, day, entry_id, recap, questions, model, prompt_version)"
+            " values (1, current_date, :id, '[]', '{}', 'm', 'v')",
+            id=entry_id,
+        )
+
+    await sweeper(pipeline).run()
+
+    async with sessions() as session:
+        rows = await session.scalars(text("select entry_id from ai.reflection_aids"))
+        assert list(rows) == [1]
+
+
 async def test_never_mass_deletes_when_the_view_looks_broken(sessions: Sessions) -> None:
     pipeline = Pipeline(sessions)
     await pipeline.write(

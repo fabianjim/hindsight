@@ -102,6 +102,6 @@ class Sweeper:
             if orphans > max(ORPHAN_FLOOR, total * ORPHAN_SHARE_LIMIT):
                 log.warning("%d of %d insights look orphaned, not deleting", orphans, total)
                 return 0, orphans
-            for table in ("ai.entry_insights", "ai.entry_failures"):
+            for table in ("ai.entry_insights", "ai.entry_failures", "ai.reflection_aids"):
                 await session.execute(text(f"delete from {table} t {ORPHANS}"))
         return orphans, 0
