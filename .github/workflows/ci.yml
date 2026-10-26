@@ -10,7 +10,8 @@ permissions:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # a newer push must not cut off a deploy halfway
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   check:
@@ -113,3 +114,37 @@ jobs:
           -e HINDSIGHT_SERVICE_TOKEN=ci-token-not-secret-0123456789abcdef
           -e HINDSIGHT_DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:54322/postgres
           hindsight:ci sh -c "alembic upgrade head && alembic check"
+
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [check, migrations, docker]
+    # the instance is a graviton t4g, so the image builds natively on arm
+    runs-on: ubuntu-24.04-arm
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: us-east-1
+      AWS_DEFAULT_REGION: us-east-1
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # vestry owns the deploy bundle; it's a public repo, so no token is needed
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: fabianjim/vestry
+          path: vestry
+          sparse-checkout: deploy
+
+      - name: Install the AWS CLI and zip if missing
+        run: |
+          command -v zip >/dev/null || sudo apt-get install -y -qq zip
+          if ! command -v aws >/dev/null; then
+            curl -sSfL https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip -o /tmp/awscli.zip
+            unzip -q /tmp/awscli.zip -d /tmp && sudo /tmp/aws/install
+          fi
+
+      - name: Push the hindsight image
+        run: vestry/deploy/push-image.sh hindsight . Dockerfile "$GITHUB_SHA"
+
+      - name: Deploy to Elastic Beanstalk
+        run: vestry/deploy/deploy.sh "hindsight ${GITHUB_SHA:0:12}"

@@ -28,6 +28,7 @@ Hindsight is the Python AI service behind Vestry, a portfolio journal for reflec
   - `uv run python -m hindsight.worker` (the queue consumer; needs the API key and vestry's `core_read` view)
   - `uv run python -m scripts.eval_entry_insight` (dry run, free); add `--paid` to call the real model, which needs explicit approval for each run. `scripts.eval_reflection_aid` works the same way. With Langfuse keys it records an experiment run; without them it prints scores.
 - CI (`.github/workflows/ci.yml`): lint, format, typecheck, tests; migrations applied to a real Postgres plus `alembic check`; Docker build. Actions are pinned to commit SHAs.
+- Deploy: on main, after those jobs pass, CI pushes the arm64 image to ECR and runs vestry's `deploy/deploy.sh`, which deploys the newest vestry and hindsight images together to the EB environment `vestry-api-env`. Production migrations are manual: run `alembic upgrade head` as `postgres` before pushing code that needs them (migrations stay additive, so old code keeps working). The runtime login is `hindsight`, with the grants in `scripts/runtime_role.sql`.
 
 ## Invariants (high-risk; verify carefully when touched)
 
