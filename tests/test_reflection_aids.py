@@ -86,3 +86,23 @@ async def test_remaining_never_goes_negative(store: ReflectionAidStore) -> None:
         await save(store, entry_id=entry_id)
 
     assert await store.remaining(1, TODAY) == 0
+
+
+async def test_latest_returns_the_newest_aid_from_any_day(store: ReflectionAidStore) -> None:
+    older = ReflectionAid(recap=[], questions=["An older question?"])
+    await save(store, entry_id=7, day=TODAY - timedelta(days=3), aid=older)
+    await save(store, entry_id=7, day=TODAY - timedelta(days=1))
+    await save(store, entry_id=8, day=TODAY - timedelta(days=5), aid=older)
+
+    found = await store.latest(1, [7, 8, 9])
+
+    assert set(found) == {7, 8}
+    assert (found[7].aid, found[7].day) == (AID, TODAY - timedelta(days=1))
+    assert (found[8].aid, found[8].day) == (older, TODAY - timedelta(days=5))
+
+
+async def test_latest_is_scoped_to_the_user(store: ReflectionAidStore) -> None:
+    await save(store, user_id=2)
+
+    assert await store.latest(1, [7]) == {}
+    assert await store.latest(2, []) == {}

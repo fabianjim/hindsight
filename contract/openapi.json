@@ -303,6 +303,45 @@
         "title": "ReflectionAidResult",
         "type": "object"
       },
+      "SavedReflectionAid": {
+        "properties": {
+          "aid": {
+            "$ref": "#/components/schemas/ReflectionAid"
+          },
+          "entryId": {
+            "title": "Entryid",
+            "type": "integer"
+          },
+          "generatedOn": {
+            "format": "date",
+            "title": "Generatedon",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entryId",
+          "aid",
+          "generatedOn"
+        ],
+        "title": "SavedReflectionAid",
+        "type": "object"
+      },
+      "SavedReflectionAidList": {
+        "properties": {
+          "aids": {
+            "items": {
+              "$ref": "#/components/schemas/SavedReflectionAid"
+            },
+            "title": "Aids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "aids"
+        ],
+        "title": "SavedReflectionAidList",
+        "type": "object"
+      },
       "Since": {
         "properties": {
           "priceNow": {
@@ -602,6 +641,64 @@
           }
         ],
         "summary": "List Insights"
+      }
+    },
+    "/v1/users/{userId}/reflection-aids": {
+      "get": {
+        "operationId": "list_reflection_aids",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "schema": {
+              "title": "Userid",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "entryIds",
+            "required": true,
+            "schema": {
+              "items": {
+                "type": "integer"
+              },
+              "maxItems": 200,
+              "minItems": 1,
+              "title": "Entryids",
+              "type": "array"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedReflectionAidList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Reflection Aids"
       }
     }
   }

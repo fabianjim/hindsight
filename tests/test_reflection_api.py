@@ -7,7 +7,7 @@ import pytest
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from hindsight.api import get_aid_store, get_generator, get_source, get_today
+from hindsight.api import MAX_ENTRY_IDS, get_aid_store, get_generator, get_source, get_today
 from hindsight.budget import BudgetLedger, Limits
 from hindsight.main import app
 from hindsight.pipeline import EntrySource
@@ -204,3 +204,37 @@ def test_no_api_key_means_no_generator() -> None:
         assert get_generator() is None
     finally:
         get_generator.cache_clear()
+
+
+async def test_lists_saved_aids_without_generating(
+    client: httpx.AsyncClient, harness: Harness
+) -> None:
+    older = ReflectionAid(recap=[], questions=["An older question?"])
+    await harness.store.save(1, 7, date(2026, 10, 20), older, MODEL, "reflection-aid-v3")
+    await harness.store.save(1, 52, date(2026, 10, 22), older, MODEL, "reflection-aid-v3")
+    await harness.store.save(2, 53, date(2026, 10, 22), older, MODEL, "reflection-aid-v3")
+
+    response = await client.get("/v1/users/1/reflection-aids", params={"entryIds": [52, 7, 53, 99]})
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "aids": [
+            {
+                "entryId": 7,
+                "aid": {"recap": [], "questions": ["An older question?"]},
+                "generatedOn": "2026-10-20",
+            },
+            {
+                "entryId": 52,
+                "aid": {"recap": [], "questions": ["An older question?"]},
+                "generatedOn": "2026-10-22",
+            },
+        ]
+    }
+    assert harness.model.calls == []
+
+
+async def test_listing_saved_aids_needs_ids_and_caps_them(client: httpx.AsyncClient) -> None:
+    assert (await client.get("/v1/users/1/reflection-aids")).status_code == 422
+    too_many = {"entryIds": list(range(MAX_ENTRY_IDS + 1))}
+    assert (await client.get("/v1/users/1/reflection-aids", params=too_many)).status_code == 422

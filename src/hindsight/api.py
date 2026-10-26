@@ -46,6 +46,16 @@ class ReflectionAidResult(WireModel):
     remaining_today: int
 
 
+class SavedReflectionAid(WireModel):
+    entry_id: int
+    aid: ReflectionAid
+    generated_on: date
+
+
+class SavedReflectionAidList(WireModel):
+    aids: list[SavedReflectionAid]
+
+
 class Problem(WireModel):
     detail: str
 
@@ -90,6 +100,24 @@ async def list_insights(
     found = await store.for_user(user_id, set(entry_ids))
     return EntryInsightList(
         insights=[EntryInsightItem(entry_id=i, insight=found[i]) for i in sorted(found)]
+    )
+
+
+# read-only, so demo visitors can be shown saved aids without ever spending
+@router.get("/users/{userId}/reflection-aids")
+async def list_reflection_aids(
+    user_id: Annotated[int, Path(alias="userId")],
+    entry_ids: Annotated[
+        list[int], Query(alias="entryIds", min_length=1, max_length=MAX_ENTRY_IDS)
+    ],
+    store: Annotated[ReflectionAidStore, Depends(get_aid_store)],
+) -> SavedReflectionAidList:
+    found = await store.latest(user_id, set(entry_ids))
+    return SavedReflectionAidList(
+        aids=[
+            SavedReflectionAid(entry_id=i, aid=found[i].aid, generated_on=found[i].day)
+            for i in sorted(found)
+        ]
     )
 
 

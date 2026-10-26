@@ -1,8 +1,10 @@
+from collections.abc import Iterable
+from dataclasses import dataclass
 from datetime import date
 
 from pydantic import Field
 from sqlalchemy import func, select
-from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.dialects.postgresql import distinct_on, insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from hindsight.enrichment import Claim
@@ -18,6 +20,12 @@ class ReflectionAid(WireModel):
     questions: list[str] = Field(max_length=3)
 
 
+@dataclass(frozen=True)
+class SavedAid:
+    aid: ReflectionAid
+    day: date
+
+
 class ReflectionAidStore:
     def __init__(self, sessions: async_sessionmaker[AsyncSession]) -> None:
         self._sessions = sessions
@@ -26,6 +34,21 @@ class ReflectionAidStore:
         async with self._sessions() as session:
             record = await session.get(ReflectionAidRecord, (user_id, day, entry_id))
             return load(record) if record else None
+
+    # the newest aid per entry from any day; reading never generates
+    async def latest(self, user_id: int, entry_ids: Iterable[int]) -> dict[int, SavedAid]:
+        statement = (
+            select(ReflectionAidRecord)
+            .where(
+                ReflectionAidRecord.user_id == user_id,
+                ReflectionAidRecord.entry_id.in_(list(entry_ids)),
+            )
+            .order_by(ReflectionAidRecord.entry_id, ReflectionAidRecord.day.desc())
+            .ext(distinct_on(ReflectionAidRecord.entry_id))
+        )
+        async with self._sessions() as session:
+            records = await session.scalars(statement)
+            return {r.entry_id: SavedAid(aid=load(r), day=r.day) for r in records}
 
     async def remaining(self, user_id: int, day: date) -> int:
         async with self._sessions() as session:
