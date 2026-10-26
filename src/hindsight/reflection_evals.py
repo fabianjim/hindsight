@@ -7,7 +7,7 @@ from hindsight.wire import WireModel
 
 # advice in any form; asking about their own plans ("what would make you sell?") is allowed
 ADVICE = re.compile(
-    r"\b(you should|should you|you might want to|consider (buying|selling|trimming|adding)"
+    r"\b(you should|should you|you (might|may|could) (want to|consider)"
     r"|(good|right) time to|i recommend|recommend)\b",
     re.IGNORECASE,
 )

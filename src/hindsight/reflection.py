@@ -22,7 +22,7 @@ from hindsight.spend import REQUEST_OVERHEAD_TOKENS, BudgetMiddleware
 from hindsight.tracing import trace_callbacks
 from hindsight.wire import WireModel
 
-PROMPT_VERSION = "reflection-aid-v1"
+PROMPT_VERSION = "reflection-aid-v3"
 PROMPT = (Path(__file__).parent / "prompts" / "reflection_aid.md").read_text()
 MAX_OUTPUT_TOKENS = 512
 # newest later entries the model sees; older ones are left out

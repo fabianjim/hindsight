@@ -71,6 +71,7 @@ def test_a_good_answer_scores_one_everywhere() -> None:
     [
         ("It is up 20% since. How does that feel?", "no_numbers"),
         ("Should you consider selling some now?", "no_advice"),
+        ("You might consider trimming here. Does that fit your plan?", "no_advice"),
         ("Was this FOMO at the time?", "feelings_from_writer"),
         ("Tell me what you were thinking", "questions_are_questions"),
     ],
@@ -83,9 +84,13 @@ def test_scores_each_kind_of_miss(question: str, metric: str) -> None:
 
 
 def test_asking_about_their_own_exit_plan_is_not_advice() -> None:
-    scores = score_reflection(CASE, run([CLAIM], ["What would make you sell?"], proposed=[POINT]))
+    for question in [
+        "What would make you sell?",
+        "What would have to happen for you to consider selling some of it?",
+    ]:
+        scores = score_reflection(CASE, run([CLAIM], [question], proposed=[POINT]))
 
-    assert scores["no_advice"] == 1
+        assert scores["no_advice"] == 1, question
 
 
 def test_a_feeling_the_writer_named_may_be_mentioned() -> None:
@@ -142,6 +147,7 @@ async def test_runs_the_experiment_end_to_end(sessions: Sessions) -> None:
 
     summary = await run_locally(cases, generator)
 
-    # the first two cases are placeholders, so an empty answer is right
-    assert summary["question_presence"] == 1.0
+    # an empty answer is right exactly where no questions are expected
+    wanted = [c.expected.has_questions for c in cases if c.expected.has_questions is not None]
+    assert summary["question_presence"] == wanted.count(False) / len(wanted)
     assert summary["no_numbers"] == 1.0
