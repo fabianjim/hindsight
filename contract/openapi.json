@@ -220,6 +220,163 @@
         "title": "IdeaSource",
         "type": "string"
       },
+      "Problem": {
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          }
+        },
+        "required": [
+          "detail"
+        ],
+        "title": "Problem",
+        "type": "object"
+      },
+      "ReflectionAid": {
+        "properties": {
+          "questions": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 3,
+            "title": "Questions",
+            "type": "array"
+          },
+          "recap": {
+            "items": {
+              "$ref": "#/components/schemas/Claim"
+            },
+            "maxItems": 3,
+            "title": "Recap",
+            "type": "array"
+          }
+        },
+        "required": [
+          "recap",
+          "questions"
+        ],
+        "title": "ReflectionAid",
+        "type": "object"
+      },
+      "ReflectionAidRequest": {
+        "properties": {
+          "laterEntryIds": {
+            "default": [],
+            "items": {
+              "type": "integer"
+            },
+            "maxItems": 50,
+            "title": "Laterentryids",
+            "type": "array"
+          },
+          "since": {
+            "$ref": "#/components/schemas/Since",
+            "default": {
+              "trades": []
+            }
+          }
+        },
+        "title": "ReflectionAidRequest",
+        "type": "object"
+      },
+      "ReflectionAidResult": {
+        "properties": {
+          "aid": {
+            "$ref": "#/components/schemas/ReflectionAid"
+          },
+          "generatedOn": {
+            "format": "date",
+            "title": "Generatedon",
+            "type": "string"
+          },
+          "remainingToday": {
+            "title": "Remainingtoday",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "aid",
+          "generatedOn",
+          "remainingToday"
+        ],
+        "title": "ReflectionAidResult",
+        "type": "object"
+      },
+      "Since": {
+        "properties": {
+          "priceNow": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pricenow"
+          },
+          "sharesNow": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sharesnow"
+          },
+          "trades": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Trade"
+            },
+            "maxItems": 20,
+            "title": "Trades",
+            "type": "array"
+          }
+        },
+        "title": "Since",
+        "type": "object"
+      },
+      "Trade": {
+        "properties": {
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "price": {
+            "exclusiveMinimum": 0.0,
+            "title": "Price",
+            "type": "number"
+          },
+          "shares": {
+            "exclusiveMinimum": 0.0,
+            "title": "Shares",
+            "type": "number"
+          },
+          "type": {
+            "enum": [
+              "BUY",
+              "SELL"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "day",
+          "type",
+          "shares",
+          "price"
+        ],
+        "title": "Trade",
+        "type": "object"
+      },
       "ValidationError": {
         "properties": {
           "ctx": {
@@ -294,6 +451,99 @@
           }
         },
         "summary": "Health"
+      }
+    },
+    "/v1/users/{userId}/entries/{entryId}/reflection-aid": {
+      "post": {
+        "operationId": "create_reflection_aid",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "schema": {
+              "title": "Userid",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entryId",
+            "required": true,
+            "schema": {
+              "title": "Entryid",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReflectionAidRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReflectionAidResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No entry with text for this user"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The user's aids for today are used up"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "AI is off, out of budget or unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Reflection Aid"
       }
     },
     "/v1/users/{userId}/insights": {
