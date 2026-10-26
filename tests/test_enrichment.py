@@ -212,15 +212,16 @@ def test_schema_rejects_out_of_range_values(change: dict[str, Any]) -> None:
         Extraction.model_validate({**EXTRACTION, **change})
 
 
-def test_strict_schema_closes_every_object() -> None:
-    def objects(node: Any) -> list[dict[str, Any]]:
-        if isinstance(node, list):
-            return [found for item in node for found in objects(item)]
-        if not isinstance(node, dict):
-            return []
-        own = [node] if node.get("type") == "object" else []
-        return own + [found for value in node.values() for found in objects(value)]
+def objects(node: Any) -> list[dict[str, Any]]:
+    if isinstance(node, list):
+        return [found for item in node for found in objects(item)]
+    if not isinstance(node, dict):
+        return []
+    own = [node] if node.get("type") == "object" else []
+    return own + [found for value in node.values() for found in objects(value)]
 
+
+def test_strict_schema_closes_every_object() -> None:
     kwargs = ProviderStrategy(Extraction, strict=True).to_model_kwargs()
     found = objects(kwargs["response_format"]["json_schema"]["schema"])
 

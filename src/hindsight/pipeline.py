@@ -29,6 +29,10 @@ TRANSIENT_ERRORS = (
 # vestry owns this view; its columns are part of the contract between the repos
 ENTRY_COLUMNS = "id, user_id, entry_type, body, ticker, timestamp, price_snapshot, tags"
 ENTRY_QUERY = text(f"select {ENTRY_COLUMNS} from core_read.journal_entries where id = :id")
+USER_ENTRIES_QUERY = text(
+    f"select {ENTRY_COLUMNS} from core_read.journal_entries"
+    " where user_id = :user_id and id = any(:ids)"
+)
 PAGE_QUERY = text(
     f"select {ENTRY_COLUMNS} from core_read.journal_entries"
     " where id > :after order by id limit :limit"
@@ -53,6 +57,12 @@ class EntrySource:
         async with self._sessions() as session:
             row = (await session.execute(ENTRY_QUERY, {"id": entry_id})).mappings().first()
         return to_source_entry(row) if row else None
+
+    # ids belonging to someone else are left out
+    async def for_user(self, user_id: int, entry_ids: list[int]) -> dict[int, EntryInput]:
+        async with self._sessions() as session:
+            rows = await session.execute(USER_ENTRIES_QUERY, {"user_id": user_id, "ids": entry_ids})
+            return {row["id"]: to_source_entry(row).entry for row in rows.mappings()}
 
     async def page(self, after: int, limit: int) -> list[SourceEntry]:
         async with self._sessions() as session:
