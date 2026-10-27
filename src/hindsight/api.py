@@ -12,6 +12,8 @@ from hindsight.db import get_sessionmaker
 from hindsight.enrichment import EntryInsight
 from hindsight.insights import InsightStore
 from hindsight.llm import get_chat_model
+from hindsight.pattern_reports import PatternReport
+from hindsight.patterns import PatternReportRequest
 from hindsight.pipeline import TRANSIENT_ERRORS, EntrySource
 from hindsight.reflection import PROMPT_VERSION, ReflectionAidGenerator, Since
 from hindsight.reflection_aids import ReflectionAid, ReflectionAidStore
@@ -54,6 +56,10 @@ class SavedReflectionAid(WireModel):
 
 class SavedReflectionAidList(WireModel):
     aids: list[SavedReflectionAid]
+
+
+class SavedPatternReport(WireModel):
+    report: PatternReport | None
 
 
 class Problem(WireModel):
@@ -161,4 +167,33 @@ async def create_reflection_aid(
     stored = await store.save(user_id, entry_id, today, aid, generator.model_name, PROMPT_VERSION)
     return ReflectionAidResult(
         aid=stored, generated_on=today, remaining_today=await store.remaining(user_id, today)
+    )
+
+
+# read-only, so demo visitors can be shown the template's report without ever spending
+@router.get("/users/{userId}/pattern-report")
+async def get_pattern_report(
+    user_id: Annotated[int, Path(alias="userId")],
+) -> SavedPatternReport:
+    return SavedPatternReport(report=None)
+
+
+@router.post(
+    "/users/{userId}/pattern-report",
+    responses={
+        503: {"model": Problem, "description": "AI is off, out of budget or unavailable"},
+    },
+)
+async def create_pattern_report(
+    user_id: Annotated[int, Path(alias="userId")],
+    request: PatternReportRequest,
+    today: Annotated[date, Depends(get_today)],
+) -> PatternReport:
+    return PatternReport(
+        generated_on=today,
+        as_of=request.as_of,
+        entries_up_to=None,
+        saved=False,
+        patterns=[],
+        needs=[],
     )

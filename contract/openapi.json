@@ -186,6 +186,33 @@
         "title": "EntryInsightList",
         "type": "object"
       },
+      "Figure": {
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "unit": {
+            "enum": [
+              "count",
+              "days"
+            ],
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "number"
+          }
+        },
+        "required": [
+          "key",
+          "value",
+          "unit"
+        ],
+        "title": "Figure",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -197,6 +224,51 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HoldingPeriod": {
+        "properties": {
+          "closedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closedat"
+          },
+          "openedAt": {
+            "format": "date-time",
+            "title": "Openedat",
+            "type": "string"
+          },
+          "pnl": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pnl"
+          },
+          "ticker": {
+            "pattern": "^[A-Z][A-Z0-9.\\-]{0,9}$",
+            "title": "Ticker",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ticker",
+          "openedAt",
+          "closedAt",
+          "pnl"
+        ],
+        "title": "HoldingPeriod",
         "type": "object"
       },
       "Horizon": {
@@ -219,6 +291,276 @@
         ],
         "title": "IdeaSource",
         "type": "string"
+      },
+      "LedgerTrade": {
+        "properties": {
+          "initial": {
+            "title": "Initial",
+            "type": "boolean"
+          },
+          "price": {
+            "exclusiveMinimum": 0.0,
+            "title": "Price",
+            "type": "number"
+          },
+          "shares": {
+            "exclusiveMinimum": 0.0,
+            "title": "Shares",
+            "type": "number"
+          },
+          "side": {
+            "enum": [
+              "BUY",
+              "SELL"
+            ],
+            "title": "Side",
+            "type": "string"
+          },
+          "ticker": {
+            "pattern": "^[A-Z][A-Z0-9.\\-]{0,9}$",
+            "title": "Ticker",
+            "type": "string"
+          },
+          "timestamp": {
+            "format": "date-time",
+            "title": "Timestamp",
+            "type": "string"
+          },
+          "tradeId": {
+            "title": "Tradeid",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "tradeId",
+          "ticker",
+          "side",
+          "shares",
+          "price",
+          "timestamp",
+          "initial"
+        ],
+        "title": "LedgerTrade",
+        "type": "object"
+      },
+      "Need": {
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/PatternKind"
+          },
+          "more": {
+            "minimum": 1.0,
+            "title": "More",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "more"
+        ],
+        "title": "Need",
+        "type": "object"
+      },
+      "Outcome": {
+        "properties": {
+          "entryId": {
+            "title": "Entryid",
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "SOLD",
+              "LATEST"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "on": {
+            "format": "date",
+            "title": "On",
+            "type": "string"
+          },
+          "price": {
+            "exclusiveMinimum": 0.0,
+            "title": "Price",
+            "type": "number"
+          }
+        },
+        "required": [
+          "entryId",
+          "price",
+          "kind",
+          "on"
+        ],
+        "title": "Outcome",
+        "type": "object"
+      },
+      "Pattern": {
+        "properties": {
+          "citations": {
+            "items": {
+              "$ref": "#/components/schemas/Citation"
+            },
+            "title": "Citations",
+            "type": "array"
+          },
+          "figures": {
+            "items": {
+              "$ref": "#/components/schemas/Figure"
+            },
+            "title": "Figures",
+            "type": "array"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/PatternKind"
+          },
+          "observation": {
+            "title": "Observation",
+            "type": "string"
+          },
+          "question": {
+            "title": "Question",
+            "type": "string"
+          },
+          "subject": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject"
+          }
+        },
+        "required": [
+          "kind",
+          "subject",
+          "figures",
+          "observation",
+          "question",
+          "citations"
+        ],
+        "title": "Pattern",
+        "type": "object"
+      },
+      "PatternKind": {
+        "enum": [
+          "felt_vs_did",
+          "outcomes_by_state",
+          "horizon_vs_holding",
+          "gains_vs_losses",
+          "silent_trades",
+          "open_theses"
+        ],
+        "title": "PatternKind",
+        "type": "string"
+      },
+      "PatternReport": {
+        "properties": {
+          "asOf": {
+            "format": "date",
+            "title": "Asof",
+            "type": "string"
+          },
+          "entriesUpTo": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entriesupto"
+          },
+          "generatedOn": {
+            "format": "date",
+            "title": "Generatedon",
+            "type": "string"
+          },
+          "needs": {
+            "items": {
+              "$ref": "#/components/schemas/Need"
+            },
+            "title": "Needs",
+            "type": "array"
+          },
+          "patterns": {
+            "items": {
+              "$ref": "#/components/schemas/Pattern"
+            },
+            "maxItems": 5,
+            "title": "Patterns",
+            "type": "array"
+          },
+          "saved": {
+            "title": "Saved",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "generatedOn",
+          "asOf",
+          "entriesUpTo",
+          "saved",
+          "patterns",
+          "needs"
+        ],
+        "title": "PatternReport",
+        "type": "object"
+      },
+      "PatternReportRequest": {
+        "properties": {
+          "asOf": {
+            "format": "date",
+            "title": "Asof",
+            "type": "string"
+          },
+          "autoEntryIds": {
+            "default": [],
+            "items": {
+              "type": "integer"
+            },
+            "maxItems": 1000,
+            "title": "Autoentryids",
+            "type": "array"
+          },
+          "holdingPeriods": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/HoldingPeriod"
+            },
+            "maxItems": 1000,
+            "title": "Holdingperiods",
+            "type": "array"
+          },
+          "outcomes": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Outcome"
+            },
+            "maxItems": 500,
+            "title": "Outcomes",
+            "type": "array"
+          },
+          "trades": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/LedgerTrade"
+            },
+            "maxItems": 1000,
+            "title": "Trades",
+            "type": "array"
+          }
+        },
+        "required": [
+          "asOf"
+        ],
+        "title": "PatternReportRequest",
+        "type": "object"
       },
       "Problem": {
         "properties": {
@@ -301,6 +643,25 @@
           "remainingToday"
         ],
         "title": "ReflectionAidResult",
+        "type": "object"
+      },
+      "SavedPatternReport": {
+        "properties": {
+          "report": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PatternReport"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "report"
+        ],
+        "title": "SavedPatternReport",
         "type": "object"
       },
       "SavedReflectionAid": {
@@ -641,6 +1002,112 @@
           }
         ],
         "summary": "List Insights"
+      }
+    },
+    "/v1/users/{userId}/pattern-report": {
+      "get": {
+        "operationId": "get_pattern_report",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "schema": {
+              "title": "Userid",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedPatternReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Pattern Report"
+      },
+      "post": {
+        "operationId": "create_pattern_report",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "schema": {
+              "title": "Userid",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatternReportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PatternReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "AI is off, out of budget or unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Pattern Report"
       }
     },
     "/v1/users/{userId}/reflection-aids": {
