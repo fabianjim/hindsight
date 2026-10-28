@@ -133,13 +133,7 @@ def test_a_user_with_nothing_needs_the_minimum_everywhere() -> None:
     found = find([])
 
     assert found.patterns == []
-    # gains_vs_losses needs the minimum on each side
-    assert found.needs == [
-        Need(
-            kind=kind, more=2 * MIN_SUPPORT if kind == PatternKind.GAINS_VS_LOSSES else MIN_SUPPORT
-        )
-        for kind in PatternKind
-    ]
+    assert found.needs == [Need(kind=kind, more=MIN_SUPPORT) for kind in PatternKind]
     assert found.entries_up_to is None
 
 
@@ -380,7 +374,7 @@ def test_gains_vs_losses_compares_median_days_and_written_entries() -> None:
 
 
 @pytest.mark.parametrize(
-    ("gains", "losses", "needed"), [(2, 1, 3), (3, 2, 1), (0, 5, 3), (0, 0, 6)]
+    ("gains", "losses", "needed"), [(2, 1, 2), (3, 2, 1), (0, 5, 3), (0, 0, 3)]
 )
 def test_gains_vs_losses_needs_the_minimum_on_both_sides(
     gains: int, losses: int, needed: int

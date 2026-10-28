@@ -244,8 +244,8 @@ def holding(entry: EntryInput, periods: Sequence[HoldingPeriod]) -> HoldingPerio
 def gains_vs_losses(written: list[EntryInput], closed: list[HoldingPeriod]) -> Group:
     gains = [p for p in closed if p.pnl is not None and p.pnl > 0]
     losses = [p for p in closed if p.pnl is not None and p.pnl < 0]
-    # both sides need the minimum, so the shortfalls add up
-    more = max(0, MIN_SUPPORT - len(gains)) + max(0, MIN_SUPPORT - len(losses))
+    # both sides need the minimum; needs reports the side that's further off
+    more = max(MIN_SUPPORT - len(gains), MIN_SUPPORT - len(losses), 0)
     if more:
         return Group(PatternKind.GAINS_VS_LOSSES, more)
 
