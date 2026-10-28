@@ -98,6 +98,7 @@ def find(
     trades: list[LedgerTrade] | None = None,
     periods: list[HoldingPeriod] | None = None,
     auto: list[int] | None = None,
+    entries_from: datetime | None = None,
 ) -> Candidates:
     facts = PatternReportRequest(
         as_of=date(2026, 10, 27),
@@ -106,7 +107,7 @@ def find(
         holding_periods=periods or [],
         auto_entry_ids=auto or [],
     )
-    return find_patterns(facts, entries, insights or {})
+    return find_patterns(facts, entries, insights or {}, entries_from)
 
 
 def of_kind(found: Candidates, kind: PatternKind) -> list[Candidate]:
@@ -433,6 +434,35 @@ def test_silent_trades_ignore_initial_trades_and_other_tickers() -> None:
 
     assert figures(candidate) == {"trades": 3, "without_entry": 3}
     assert candidate.entry_ids == []
+
+
+# when older entries weren't read
+
+
+def test_trades_before_the_read_entries_are_never_silent() -> None:
+    # entries from day 10 on were read; anything earlier is unknown
+    entries = [entry(i, T0 + (10 + i * 10) * DAY) for i in range(3)]
+    trades = [trade(i, T0 + i * DAY) for i in range(3)]  # before the window
+    trades.append(trade(3, T0 + 10.5 * DAY))  # within a day of the oldest
+    trades += [trade(10 + i, e.timestamp) for i, e in enumerate(entries)]
+
+    found = find(entries, trades=trades, entries_from=entries[0].timestamp)
+
+    # only the three trades with their whole window read are counted, and none is silent
+    assert of_kind(found, PatternKind.SILENT_TRADES) == []
+    assert more(found, PatternKind.SILENT_TRADES) == 1
+    assert of_kind(find(entries, trades=trades), PatternKind.SILENT_TRADES) != []
+
+
+def test_positions_opened_before_the_read_entries_are_left_out() -> None:
+    periods = [closed(0, 2, 10), closed(10, 3, 10), closed(20, 4, 10)]
+    periods += [closed(100 + i * 10, 20, -10) for i in range(3)]
+
+    found = find([], periods=periods, entries_from=T0 + 5 * DAY)
+
+    assert of_kind(found, PatternKind.GAINS_VS_LOSSES) == []
+    assert more(found, PatternKind.GAINS_VS_LOSSES) == 1
+    assert of_kind(find([], periods=periods), PatternKind.GAINS_VS_LOSSES) != []
 
 
 # open_theses

@@ -17,6 +17,9 @@ MAX_TRADES = 1000
 MAX_HOLDING_PERIODS = 1000
 MAX_AUTO_ENTRY_IDS = 1000
 
+# newest entries read for a report; no more than vestry can flag as auto entries
+MAX_ENTRIES = MAX_AUTO_ENTRY_IDS
+
 MIN_SUPPORT = 3
 MAX_PER_KIND = 2
 MAX_ENTRIES_PER_PATTERN = 5
@@ -99,11 +102,14 @@ class Group:
     candidate: Candidate | None = None
 
 
-# entries must be the user's own; facts about anyone else's entries are ignored
+# entries must be the user's own; facts about anyone else's entries are ignored.
+# entries_from is set when older entries weren't read: the kinds that compare the
+# whole ledger with the journal then only look at what happened from there on
 def find_patterns(
     facts: PatternReportRequest,
     entries: Iterable[EntryInput],
     insights: Mapping[int, EntryInsight],
+    entries_from: datetime | None = None,
 ) -> Candidates:
     entries = list(entries)
     auto = set(facts.auto_entry_ids)
@@ -115,13 +121,20 @@ def find_patterns(
     moves = [t for t in facts.trades if not t.initial]
     outcomes = {o.entry_id: o for o in facts.outcomes}
     closed = [p for p in facts.holding_periods if p.closed_at is not None and p.pnl is not None]
+    if entries_from is not None:
+        # a trade needs its whole window read before it can count as silent
+        silent_from = entries_from + SILENT_WINDOW
+        audited = [t for t in moves if t.timestamp >= silent_from]
+        closed = [p for p in closed if p.opened_at >= entries_from]
+    else:
+        audited = moves
 
     groups = [
         *felt_vs_did(read, moves),
         *outcomes_by_state(read, outcomes),
         *horizon_vs_holding(read, facts.holding_periods),
         gains_vs_losses(written, closed),
-        silent_trades(written, moves),
+        silent_trades(written, audited),
         open_theses(read, written),
     ]
     return Candidates(

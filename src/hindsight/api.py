@@ -4,16 +4,19 @@ from functools import lru_cache
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from fastapi.concurrency import run_in_threadpool
 from pydantic import Field
 
 from hindsight.budget import BudgetError, BudgetLedger, Limits, budget_day, utcnow
-from hindsight.config import get_settings
+from hindsight.config import Settings, get_settings
 from hindsight.db import get_sessionmaker
 from hindsight.enrichment import EntryInsight
 from hindsight.insights import InsightStore
 from hindsight.llm import get_chat_model
-from hindsight.pattern_reports import PatternReport
-from hindsight.patterns import PatternReportRequest
+from hindsight.pattern_report import PROMPT_VERSION as PATTERN_PROMPT_VERSION
+from hindsight.pattern_report import PatternNarrator
+from hindsight.pattern_reports import PatternReport, PatternReportStore
+from hindsight.patterns import MAX_ENTRIES, PatternReportRequest, find_patterns
 from hindsight.pipeline import TRANSIENT_ERRORS, EntrySource
 from hindsight.reflection import PROMPT_VERSION, ReflectionAidGenerator, Since
 from hindsight.reflection_aids import ReflectionAid, ReflectionAidStore
@@ -77,18 +80,37 @@ def get_aid_store() -> ReflectionAidStore:
 
 
 @lru_cache
+def get_pattern_store() -> PatternReportStore:
+    return PatternReportStore(get_sessionmaker())
+
+
+@lru_cache
 def get_source() -> EntrySource:
     return EntrySource(get_sessionmaker())
+
+
+def ai_enabled(settings: Settings) -> bool:
+    return settings.openai_api_key is not None and bool(settings.openai_api_key.get_secret_value())
 
 
 # none when no api key is set, so saved aids are still served with the ai off
 @lru_cache
 def get_generator() -> ReflectionAidGenerator | None:
     settings = get_settings()
-    if settings.openai_api_key is None or not settings.openai_api_key.get_secret_value():
+    if not ai_enabled(settings):
         return None
     ledger = BudgetLedger(get_sessionmaker(), Limits.from_settings(settings))
     return ReflectionAidGenerator(ledger, get_chat_model(), settings.chat_model)
+
+
+# none when no api key is set, so saved reports are still served with the ai off
+@lru_cache
+def get_narrator() -> PatternNarrator | None:
+    settings = get_settings()
+    if not ai_enabled(settings):
+        return None
+    ledger = BudgetLedger(get_sessionmaker(), Limits.from_settings(settings))
+    return PatternNarrator(ledger, get_chat_model(), settings.chat_model)
 
 
 def get_today() -> date:
@@ -174,8 +196,9 @@ async def create_reflection_aid(
 @router.get("/users/{userId}/pattern-report")
 async def get_pattern_report(
     user_id: Annotated[int, Path(alias="userId")],
+    store: Annotated[PatternReportStore, Depends(get_pattern_store)],
 ) -> SavedPatternReport:
-    return SavedPatternReport(report=None)
+    return SavedPatternReport(report=await store.latest(user_id))
 
 
 @router.post(
@@ -187,13 +210,43 @@ async def get_pattern_report(
 async def create_pattern_report(
     user_id: Annotated[int, Path(alias="userId")],
     request: PatternReportRequest,
+    store: Annotated[PatternReportStore, Depends(get_pattern_store)],
+    source: Annotated[EntrySource, Depends(get_source)],
+    insights: Annotated[InsightStore, Depends(get_store)],
+    narrator: Annotated[PatternNarrator | None, Depends(get_narrator)],
     today: Annotated[date, Depends(get_today)],
 ) -> PatternReport:
-    return PatternReport(
+    if cached := await store.for_day(user_id, today):
+        return cached
+
+    entries = await source.newest_for_user(user_id, MAX_ENTRIES)
+    found = await insights.for_user(user_id, [e.id for e in entries])
+    # older entries weren't read when the cap is reached
+    entries_from = entries[-1].timestamp if len(entries) == MAX_ENTRIES else None
+    # plain python over up to a thousand entries and trades; keep it off the event loop
+    candidates = await run_in_threadpool(find_patterns, request, entries, found, entries_from)
+    # empty reports aren't saved, so they never use up the day
+    empty = PatternReport(
         generated_on=today,
         as_of=request.as_of,
-        entries_up_to=None,
+        entries_up_to=candidates.entries_up_to,
         saved=False,
         patterns=[],
-        needs=[],
+        needs=candidates.needs,
     )
+    if not candidates.patterns:
+        return empty
+    if narrator is None:
+        raise HTTPException(503, "AI is off")
+
+    try:
+        patterns = await narrator.narrate(candidates.patterns, {e.id: e for e in entries}, user_id)
+    except (BudgetError, *TRANSIENT_ERRORS) as error:
+        log.warning("pattern report for user %d failed (%s)", user_id, type(error).__name__)
+        raise HTTPException(503, "AI is unavailable") from None
+    if not patterns:
+        # saving it would leave the user nothing to refresh away from until tomorrow
+        log.warning("pattern report for user %d had no narration that checked out", user_id)
+        return empty
+    report = empty.model_copy(update={"saved": True, "patterns": patterns})
+    return await store.save(user_id, report, narrator.model_name, PATTERN_PROMPT_VERSION)
