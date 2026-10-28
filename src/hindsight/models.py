@@ -130,6 +130,21 @@ class ReflectionAidRecord(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+# one per user and new york day; every day's report is kept and reads take the newest
+class PatternReportRecord(Base):
+    __tablename__ = "pattern_reports"
+
+    user_id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False)
+    day: Mapped[date] = mapped_column(primary_key=True)
+    # the patterns and needs; the rest of the report lives in columns
+    report: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    as_of: Mapped[date]
+    entries_up_to: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    model: Mapped[str] = mapped_column(Text)
+    prompt_version: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 # paid attempts that raised, per version of an entry's text
 class EntryFailureRecord(Base):
     __tablename__ = "entry_failures"

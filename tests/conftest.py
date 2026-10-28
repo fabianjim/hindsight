@@ -21,6 +21,7 @@ TRUNCATED = [
     "ai.entry_insights",
     "ai.entry_failures",
     "ai.reflection_aids",
+    "ai.pattern_reports",
     "core_read.journal_entries",
     "pgmq.q_entry_events",
     "pgmq.a_entry_events",
