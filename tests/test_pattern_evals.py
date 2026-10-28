@@ -76,6 +76,8 @@ def test_a_good_answer_scores_one_everywhere() -> None:
     ("changes", "metric"),
     [
         ({"observation": "You bought 3 times after feeling anxious."}, "no_digits"),
+        ({"observation": "You bought three times after feeling anxious."}, "no_number_words"),
+        ({"observation": "You felt anxious and only once didn't buy after."}, "no_number_words"),
         ({"question": "Should you consider waiting a week next time?"}, "no_advice"),
         ({"observation": "You wrote about feeling anxious. The stock will recover."}, "no_advice"),
         ({"observation": "You bought while anxious, which was a mistake."}, "no_grading"),

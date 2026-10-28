@@ -29,6 +29,12 @@ MOTIVES = re.compile(
     r"|to avoid|driven by|so that you|in order to)\b",
     re.IGNORECASE,
 )
+# counts spelled out; proportions like "most" or "about half" are what the prompt asks for
+NUMBER_WORDS = re.compile(
+    r"\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|twenty|hundred"
+    r"|once|twice|dozen)\b",
+    re.IGNORECASE,
+)
 SECOND_PERSON = re.compile(r"\b(you|your)\b", re.IGNORECASE)
 # a sentence ends at . ! or ? followed by a space or the end
 SENTENCE_END = re.compile(r"[.!?](\s|$)")
@@ -109,6 +115,7 @@ def score_pattern_report(case: PatternCase, run: PatternEvalRun) -> dict[str, fl
             sorted(indexes) == list(range(len(patterns))) and len(items) == len(patterns)
         ),
         "no_digits": float(not any(re.search(r"\d", t) for t in written)),
+        "no_number_words": float(not any(NUMBER_WORDS.search(t) for t in written)),
         "no_advice": float(not any(ADVICE.search(t) or PREDICTION.search(t) for t in written)),
         "no_grading": float(not any(GRADING.search(t) for t in written)),
         "no_jargon": float(not any(JARGON.search(t) for t in written)),
