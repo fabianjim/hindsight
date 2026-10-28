@@ -4,9 +4,10 @@ from typing import Literal
 from pydantic import Field
 
 from hindsight.citations import Citation
-from hindsight.patterns import MAX_PATTERNS
 from hindsight.vocab import PatternKind
 from hindsight.wire import WireModel
+
+MAX_PATTERNS = 5
 
 
 # vestry words the figures; vestry ignores keys it doesn't know
