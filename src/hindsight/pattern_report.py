@@ -1,4 +1,5 @@
 import json
+import re
 import secrets
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -22,9 +23,15 @@ from hindsight.spend import REQUEST_OVERHEAD_TOKENS, BudgetMiddleware
 from hindsight.tracing import trace_callbacks
 from hindsight.vocab import PatternKind
 
-PROMPT_VERSION = "pattern-report-v1"
+PROMPT_VERSION = "pattern-report-v2"
 PROMPT = (Path(__file__).parent / "prompts" / "pattern_report.md").read_text()
 MAX_OUTPUT_TOKENS = 1200
+# counts spelled out; proportions like "most" or "about half" are what the prompt asks for
+NUMBER_WORDS = re.compile(
+    r"\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|twenty|hundred"
+    r"|once|twice|dozen)\b",
+    re.IGNORECASE,
+)
 
 
 # openai strict mode requires additionalProperties: false on every object
@@ -163,7 +170,7 @@ def ground(
             continue
         observation, question = item.observation.strip(), item.question.strip()
         # the figures carry the numbers; vestry words them
-        if not observation or not question or has_digit(observation + question):
+        if not observation or not question or has_number(f"{observation} {question}"):
             continue
         # quotes may only come from the entries this pattern was shown
         bodies = {i: entries[i].body for i in candidate.entry_ids if i in entries}
@@ -185,5 +192,6 @@ def ground(
     return patterns
 
 
-def has_digit(text: str) -> bool:
-    return any(c.isdigit() for c in text)
+# a count in the text could disagree with the figures shown beside it
+def has_number(text: str) -> bool:
+    return any(c.isdigit() for c in text) or NUMBER_WORDS.search(text) is not None

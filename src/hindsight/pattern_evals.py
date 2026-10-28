@@ -5,7 +5,7 @@ from pathlib import Path
 
 from hindsight.citations import Citation, verified
 from hindsight.enrichment import EntryInput, EntryInsight
-from hindsight.pattern_report import NarrationRun
+from hindsight.pattern_report import NUMBER_WORDS, NarrationRun
 from hindsight.patterns import Candidate, Candidates, PatternReportRequest
 from hindsight.reflection_evals import ADVICE, FEELINGS
 from hindsight.vocab import PatternKind
@@ -27,12 +27,6 @@ JARGON = re.compile(
 MOTIVES = re.compile(
     r"\b(because you|out of (fear|greed)|you (wanted|were trying|tried|needed) to"
     r"|to avoid|driven by|so that you|in order to)\b",
-    re.IGNORECASE,
-)
-# counts spelled out; proportions like "most" or "about half" are what the prompt asks for
-NUMBER_WORDS = re.compile(
-    r"\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|twenty|hundred"
-    r"|once|twice|dozen)\b",
     re.IGNORECASE,
 )
 SECOND_PERSON = re.compile(r"\b(you|your)\b", re.IGNORECASE)

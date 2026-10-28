@@ -145,6 +145,8 @@ async def test_returns_grounded_patterns_in_ranked_order(
         {"observation": "You bought 3 times after feeling anxious."},
         {"question": "What happened in the 2 weeks after?"},
         {"observation": "You bought ３ times."},  # any unicode digit
+        {"observation": "You bought three times after feeling anxious."},
+        {"question": "Why did you sell only once?"},
         {"observation": "  "},
         {"question": ""},
     ],
