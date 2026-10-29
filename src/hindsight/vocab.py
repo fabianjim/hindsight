@@ -45,3 +45,20 @@ class PatternKind(StrEnum):
     GAINS_VS_LOSSES = "gains_vs_losses"
     SILENT_TRADES = "silent_trades"
     OPEN_THESES = "open_theses"
+
+
+# vestry skips kinds it doesn't know, so adding one is backward compatible
+class BehaviorKind(StrEnum):
+    NO_PLAN = "no_plan"
+    UNDOCUMENTED = "undocumented"
+    EMOTIONAL = "emotional"
+    FOMO = "fomo"
+    HYPE = "hype"
+    RUN_UP = "run_up"
+    OVERTRADING = "overtrading"
+    OVERCONFIDENCE = "overconfidence"
+    PRICE_ACTION = "price_action"
+    LOSS_AVERSION = "loss_aversion"
+    SHORT_TERM = "short_term"
+    RISK_CONCENTRATION = "risk_concentration"
+    POSITION_SIZING = "position_sizing"

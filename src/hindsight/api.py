@@ -4,19 +4,21 @@ from functools import lru_cache
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
-from fastapi.concurrency import run_in_threadpool
 from pydantic import Field
 
+from hindsight.behavior_reports import (
+    MAX_LISTED,
+    BehaviorReport,
+    BehaviorReportList,
+    SavedBehaviorReport,
+)
+from hindsight.behaviors import BehaviorReportRequest
 from hindsight.budget import BudgetError, BudgetLedger, Limits, budget_day, utcnow
 from hindsight.config import Settings, get_settings
 from hindsight.db import get_sessionmaker
 from hindsight.enrichment import EntryInsight
 from hindsight.insights import InsightStore
 from hindsight.llm import get_chat_model
-from hindsight.pattern_report import PROMPT_VERSION as PATTERN_PROMPT_VERSION
-from hindsight.pattern_report import PatternNarrator
-from hindsight.pattern_reports import PatternReport, PatternReportStore
-from hindsight.patterns import MAX_ENTRIES, PatternReportRequest, find_patterns
 from hindsight.pipeline import TRANSIENT_ERRORS, EntrySource
 from hindsight.reflection import PROMPT_VERSION, ReflectionAidGenerator, Since
 from hindsight.reflection_aids import ReflectionAid, ReflectionAidStore
@@ -61,12 +63,10 @@ class SavedReflectionAidList(WireModel):
     aids: list[SavedReflectionAid]
 
 
-class SavedPatternReport(WireModel):
-    report: PatternReport | None
-
-
 class Problem(WireModel):
     detail: str
+    # set when vestry acts on the reason, e.g. ATTEMPTED_TODAY
+    code: str | None = None
 
 
 @lru_cache
@@ -77,11 +77,6 @@ def get_store() -> InsightStore:
 @lru_cache
 def get_aid_store() -> ReflectionAidStore:
     return ReflectionAidStore(get_sessionmaker())
-
-
-@lru_cache
-def get_pattern_store() -> PatternReportStore:
-    return PatternReportStore(get_sessionmaker())
 
 
 @lru_cache
@@ -101,16 +96,6 @@ def get_generator() -> ReflectionAidGenerator | None:
         return None
     ledger = BudgetLedger(get_sessionmaker(), Limits.from_settings(settings))
     return ReflectionAidGenerator(ledger, get_chat_model(), settings.chat_model)
-
-
-# none when no api key is set, so saved reports are still served with the ai off
-@lru_cache
-def get_narrator() -> PatternNarrator | None:
-    settings = get_settings()
-    if not ai_enabled(settings):
-        return None
-    ledger = BudgetLedger(get_sessionmaker(), Limits.from_settings(settings))
-    return PatternNarrator(ledger, get_chat_model(), settings.chat_model)
 
 
 def get_today() -> date:
@@ -192,61 +177,44 @@ async def create_reflection_aid(
     )
 
 
-# read-only, so demo visitors can be shown the template's report without ever spending
-@router.get("/users/{userId}/pattern-report")
-async def get_pattern_report(
-    user_id: Annotated[int, Path(alias="userId")],
-    store: Annotated[PatternReportStore, Depends(get_pattern_store)],
-) -> SavedPatternReport:
-    return SavedPatternReport(report=await store.latest(user_id))
-
-
+# a stub until behaviors are found and narrated: nothing qualifies yet, so nothing is
+# saved and the day isn't used
 @router.post(
-    "/users/{userId}/pattern-report",
+    "/users/{userId}/behavior-reports",
     responses={
+        409: {"model": Problem, "description": "Today's attempt already failed (ATTEMPTED_TODAY)"},
         503: {"model": Problem, "description": "AI is off, out of budget or unavailable"},
     },
 )
-async def create_pattern_report(
+async def create_behavior_report(
     user_id: Annotated[int, Path(alias="userId")],
-    request: PatternReportRequest,
-    store: Annotated[PatternReportStore, Depends(get_pattern_store)],
-    source: Annotated[EntrySource, Depends(get_source)],
-    insights: Annotated[InsightStore, Depends(get_store)],
-    narrator: Annotated[PatternNarrator | None, Depends(get_narrator)],
+    request: BehaviorReportRequest,
     today: Annotated[date, Depends(get_today)],
-) -> PatternReport:
-    if cached := await store.for_day(user_id, today):
-        return cached
-
-    entries = await source.newest_for_user(user_id, MAX_ENTRIES)
-    found = await insights.for_user(user_id, [e.id for e in entries])
-    # older entries weren't read when the cap is reached
-    entries_from = entries[-1].timestamp if len(entries) == MAX_ENTRIES else None
-    # plain python over up to a thousand entries and trades; keep it off the event loop
-    candidates = await run_in_threadpool(find_patterns, request, entries, found, entries_from)
-    # empty reports aren't saved, so they never use up the day
-    empty = PatternReport(
-        generated_on=today,
+) -> BehaviorReport:
+    return BehaviorReport(
+        day=today,
+        generated_at=utcnow(),
         as_of=request.as_of,
-        entries_up_to=candidates.entries_up_to,
+        entries_up_to=None,
         saved=False,
-        patterns=[],
-        needs=candidates.needs,
+        behaviors=[],
+        needs=[],
     )
-    if not candidates.patterns:
-        return empty
-    if narrator is None:
-        raise HTTPException(503, "AI is off")
 
-    try:
-        patterns = await narrator.narrate(candidates.patterns, {e.id: e for e in entries}, user_id)
-    except (BudgetError, *TRANSIENT_ERRORS) as error:
-        log.warning("pattern report for user %d failed (%s)", user_id, type(error).__name__)
-        raise HTTPException(503, "AI is unavailable") from None
-    if not patterns:
-        # saving it would leave the user nothing to refresh away from until tomorrow
-        log.warning("pattern report for user %d had no narration that checked out", user_id)
-        return empty
-    report = empty.model_copy(update={"saved": True, "patterns": patterns})
-    return await store.save(user_id, report, narrator.model_name, PATTERN_PROMPT_VERSION)
+
+# read-only, so demo visitors can be shown the template's reports without ever spending
+@router.get("/users/{userId}/behavior-reports")
+async def list_behavior_reports(
+    user_id: Annotated[int, Path(alias="userId")],
+    before: Annotated[date | None, Query()] = None,
+    limit: Annotated[int, Query(ge=1, le=MAX_LISTED)] = 10,
+) -> BehaviorReportList:
+    return BehaviorReportList(reports=[], has_older=False, last_attempt=None)
+
+
+@router.get("/users/{userId}/behavior-reports/{day}")
+async def get_behavior_report(
+    user_id: Annotated[int, Path(alias="userId")],
+    day: Annotated[date, Path()],
+) -> SavedBehaviorReport:
+    return SavedBehaviorReport(report=None)
