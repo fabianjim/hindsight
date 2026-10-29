@@ -36,6 +36,8 @@ def reply(ticker: str) -> AIMessage:
         "idea_source": None,
         "tickers": [ticker],
         "themes": [],
+        "reasoning_basis": None,
+        "thesis_outcome": None,
     }
     return AIMessage(
         content=json.dumps(extraction),

@@ -37,6 +37,21 @@ class IdeaSource(StrEnum):
     PROFESSIONAL = "professional"
 
 
+# what the writer's own reasoning for the decision rests on
+class ReasoningBasis(StrEnum):
+    FUNDAMENTALS = "fundamentals"
+    PRICE_ACTION = "price_action"
+    COMMENTARY = "commentary"
+    MIXED = "mixed"
+
+
+# set only when an entry looks back on whether an earlier thesis held
+class ThesisOutcome(StrEnum):
+    PLAYED_OUT = "played_out"
+    DID_NOT = "did_not"
+    MIXED = "mixed"
+
+
 # vestry skips kinds it doesn't know, so adding one is backward compatible
 class PatternKind(StrEnum):
     FELT_VS_DID = "felt_vs_did"

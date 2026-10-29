@@ -34,6 +34,8 @@ class InsightStore:
             "emotions": [emotion.value for emotion in insight.emotions],
             "tickers": insight.tickers,
             "themes": insight.themes,
+            "reasoning_basis": insight.reasoning_basis,
+            "thesis_outcome": insight.thesis_outcome,
         }
         statement = insert(EntryInsightRecord).values(entry_id=enrichment.entry_id, **values)
         statement = statement.on_conflict_do_update(
@@ -129,5 +131,7 @@ def load(record: EntryInsightRecord) -> EntryInsight:
             "emotions": record.emotions,
             "tickers": record.tickers,
             "themes": record.themes,
+            "reasoning_basis": record.reasoning_basis,
+            "thesis_outcome": record.thesis_outcome,
         }
     )

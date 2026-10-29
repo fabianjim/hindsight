@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Literal
 
 from hindsight.enrichment import Enrichment, EntryInput
-from hindsight.vocab import Emotion, Horizon, IdeaSource
+from hindsight.vocab import Emotion, Horizon, IdeaSource, ReasoningBasis, ThesisOutcome
 from hindsight.wire import WireModel
 
 
@@ -14,6 +14,8 @@ class Expected(WireModel):
     idea_source: IdeaSource | None
     emotions: list[Emotion]
     tickers: list[str]
+    reasoning_basis: ReasoningBasis | None
+    thesis_outcome: ThesisOutcome | None
 
 
 class EvalCase(WireModel):
@@ -46,6 +48,8 @@ def score(expected: Expected, result: Enrichment) -> dict[str, float]:
         ),
         "emotions": overlap(set(insight.emotions), set(expected.emotions)),
         "tickers": overlap(set(insight.tickers), set(expected.tickers)),
+        "reasoning_basis": float(insight.reasoning_basis == expected.reasoning_basis),
+        "thesis_outcome": float(insight.thesis_outcome == expected.thesis_outcome),
     }
     # claims the model made that survived the quote check; the clearest signal of invention
     raw = result.extraction

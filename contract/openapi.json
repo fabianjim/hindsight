@@ -504,6 +504,16 @@
               }
             ]
           },
+          "reasoningBasis": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReasoningBasis"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "themes": {
             "items": {
               "type": "string"
@@ -515,6 +525,16 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/Claim"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "thesisOutcome": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ThesisOutcome"
               },
               {
                 "type": "null"
@@ -1011,6 +1031,16 @@
         "title": "Problem",
         "type": "object"
       },
+      "ReasoningBasis": {
+        "enum": [
+          "fundamentals",
+          "price_action",
+          "commentary",
+          "mixed"
+        ],
+        "title": "ReasoningBasis",
+        "type": "string"
+      },
       "ReflectionAid": {
         "properties": {
           "questions": {
@@ -1177,6 +1207,15 @@
         },
         "title": "Since",
         "type": "object"
+      },
+      "ThesisOutcome": {
+        "enum": [
+          "played_out",
+          "did_not",
+          "mixed"
+        ],
+        "title": "ThesisOutcome",
+        "type": "string"
       },
       "Trade": {
         "properties": {

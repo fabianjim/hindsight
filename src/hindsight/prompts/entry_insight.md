@@ -12,3 +12,5 @@ Record only what the writer actually expressed. When something isn't there, use 
 - idea_source: where the idea came from, only if they said so. professional means an analyst, advisor or newsletter.
 - tickers: stock symbols the body mentions, in uppercase.
 - themes: up to 5 short topics of one to three words, such as "AI capex" or "rate cuts".
+- reasoning_basis: what the writer's own reason for this decision rests on, only if they gave one. fundamentals means the business itself: revenue, earnings, margins, valuation, competitive position. price_action means the chart or the move: momentum, a breakout, a dip, "it's running". commentary means what someone else said: management, the news, analysts or social media. mixed means two or more of these carry similar weight. When one clearly leads, choose it.
+- thesis_outcome: only when the writer looks back on an earlier decision and says whether the reason they had for it held. played_out means it did, did_not means it didn't, mixed means partly. A price move alone is not an outcome: "it went up" says nothing about whether the reason held.

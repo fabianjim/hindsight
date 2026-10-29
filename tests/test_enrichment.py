@@ -22,7 +22,14 @@ from hindsight.enrichment import (
     render,
 )
 from hindsight.models import Generation, Status
-from hindsight.vocab import Emotion, EntryType, Horizon, IdeaSource
+from hindsight.vocab import (
+    Emotion,
+    EntryType,
+    Horizon,
+    IdeaSource,
+    ReasoningBasis,
+    ThesisOutcome,
+)
 from tests.fakes import FakeToolModel
 
 pytestmark = pytest.mark.anyio
@@ -57,6 +64,8 @@ EXTRACTION: dict[str, Any] = {
     "idea_source": None,
     "tickers": ["NVDA"],
     "themes": ["AI capex"],
+    "reasoning_basis": "fundamentals",
+    "thesis_outcome": None,
 }
 
 
@@ -96,7 +105,8 @@ async def test_extracts_a_grounded_insight(ledger: BudgetLedger, sessions: Sessi
         ["NVDA"],
         ["AI capex"],
     )
-    assert (result.entry_id, result.model, result.prompt_version) == (7, MODEL, "entry-insight-v1")
+    assert (insight.reasoning_basis, insight.thesis_outcome) == (ReasoningBasis.FUNDAMENTALS, None)
+    assert (result.entry_id, result.model, result.prompt_version) == (7, MODEL, "entry-insight-v2")
     assert result.input_hash == input_hash(render(ENTRY), MODEL)
     assert await statuses(sessions) == [Status.SUCCEEDED]
 
@@ -205,6 +215,8 @@ def test_input_hash_tracks_what_the_model_sees(monkeypatch: pytest.MonkeyPatch) 
         {"emotions": ["greedy"]},
         {"tickers": ["nvda"]},
         {"emotions": ["fomo"] * 4},
+        {"reasoning_basis": "vibes"},
+        {"thesis_outcome": "lucky"},
     ],
 )
 def test_schema_rejects_out_of_range_values(change: dict[str, Any]) -> None:
@@ -234,3 +246,16 @@ def test_schema_accepts_every_documented_value() -> None:
         for source in IdeaSource:
             Extraction.model_validate({**EXTRACTION, "horizon": horizon, "idea_source": source})
     Extraction.model_validate({**EXTRACTION, "emotions": list(Emotion)[:3], "conviction": 5})
+    for basis in ReasoningBasis:
+        for outcome in ThesisOutcome:
+            Extraction.model_validate(
+                {**EXTRACTION, "reasoning_basis": basis, "thesis_outcome": outcome}
+            )
+
+
+# strict mode fills every field, so a missing one would be a schema the provider rejects
+def test_strict_schema_requires_the_new_fields() -> None:
+    kwargs = ProviderStrategy(Extraction, strict=True).to_model_kwargs()
+    schema = kwargs["response_format"]["json_schema"]["schema"]
+
+    assert {"reasoning_basis", "thesis_outcome"} <= set(schema["required"])

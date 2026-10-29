@@ -20,7 +20,7 @@ from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.schema import UniqueConstraint
 
-from hindsight.vocab import Horizon, IdeaSource
+from hindsight.vocab import Horizon, IdeaSource, ReasoningBasis, ThesisOutcome
 
 SCHEMA = "ai"
 
@@ -112,6 +112,12 @@ class EntryInsightRecord(Base):
     emotions: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default="{}")
     tickers: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default="{}")
     themes: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default="{}")
+    reasoning_basis: Mapped[ReasoningBasis | None] = mapped_column(
+        text_enum(ReasoningBasis, "reasoning_basis")
+    )
+    thesis_outcome: Mapped[ThesisOutcome | None] = mapped_column(
+        text_enum(ThesisOutcome, "thesis_outcome")
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
