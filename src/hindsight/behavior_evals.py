@@ -30,7 +30,7 @@ JARGON = re.compile(
 )
 MOTIVES = re.compile(
     r"\b(because you|out of (fear|greed)|you (wanted|were trying|tried|needed) to"
-    r"|to avoid|driven by|so that you|in order to)\b",
+    r"|to avoid|driven by|motivated by|so that you|in order to)\b",
     re.IGNORECASE,
 )
 SECOND_PERSON = re.compile(r"\b(you|your)\b", re.IGNORECASE)

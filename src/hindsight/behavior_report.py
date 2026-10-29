@@ -21,19 +21,18 @@ from hindsight.llm import UserContext
 from hindsight.pricing import Price, price_of
 from hindsight.spend import REQUEST_OVERHEAD_TOKENS, BudgetMiddleware
 from hindsight.tracing import trace_callbacks
-from hindsight.vocab import BehaviorKind
 
-PROMPT_VERSION = "behavior-report-v4"
+PROMPT_VERSION = "behavior-report-v5"
 PROMPT = (Path(__file__).parent / "prompts" / "behavior_report.md").read_text()
 MAX_OUTPUT_TOKENS = 1200
 # the observation has to fit a card that can't scroll
 MAX_SENTENCES = 2
 MAX_SENTENCE_WORDS = 24
 # counts spelled out; proportions like "most" or "about half" are what the prompt asks for.
-# "every one" and "each one" mean all of them, so they aren't counts
+# "every one", "each one" and "at least one" aren't counts
 NUMBER_WORDS = re.compile(
-    r"\b((?<!\bevery )(?<!\beach )one|two|three|four|five|six|seven|eight|nine|ten|eleven"
-    r"|twelve|twenty|hundred|once|twice|dozen)\b",
+    r"\b((?<!\bevery )(?<!\beach )(?<!\bat least )one|two|three|four|five|six|seven|eight|nine"
+    r"|ten|eleven|twelve|twenty|hundred|once|twice|dozen)\b",
     re.IGNORECASE,
 )
 SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
@@ -203,8 +202,9 @@ def ground(
         bodies = {i: entries[i].body for i in found.shown_entry_ids if i in entries}
         quotes = [Citation(entry_id=q.entry_id, quote=q.quote) for q in item.quotes]
         citations = verified(quotes, bodies)
-        # undocumented is about the missing entry, so it has nothing to cite
-        if not citations and found.kind != BehaviorKind.UNDOCUMENTED:
+        # a behavior shown no entries (always undocumented, sometimes a holding never written
+        # about) has nothing to cite; one that was shown entries must cite them
+        if not citations and bodies:
             continue
         grounded.append(
             Behavior(

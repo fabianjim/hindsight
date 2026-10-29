@@ -93,6 +93,7 @@ def test_a_good_answer_scores_one_everywhere() -> None:
             {"observation": "You bought because you wanted relief from feeling anxious."},
             "no_motives",
         ),
+        ({"observation": "You made buys motivated by feeling anxious."}, "no_motives"),
         (
             {"observation": "You wrote about feeling anxious, and you bought in a panic."},
             "feelings_from_writer",

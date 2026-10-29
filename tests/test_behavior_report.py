@@ -195,9 +195,10 @@ async def test_drops_a_behavior_whose_text_breaks_the_rules(
     [
         "Every one of these buys ended lower than your other buys.",
         "Each one of these buys ended lower than your other buys.",
+        "You wrote at least one reason for each of these buys.",
     ],
 )
-async def test_every_one_and_each_one_mean_all_not_a_count(
+async def test_every_one_each_one_and_at_least_one_are_not_counts(
     ledger: BudgetLedger, observation: str
 ) -> None:
     behaviors = await narrate(ledger, with_item(1, observation=observation))
@@ -267,6 +268,28 @@ async def test_keeps_only_the_quotes_that_check_out(ledger: BudgetLedger) -> Non
 
 async def test_undocumented_needs_no_citation(ledger: BudgetLedger) -> None:
     behaviors = await narrate(ledger, ITEMS)
+
+    assert behaviors[0].kind == BehaviorKind.UNDOCUMENTED
+    assert behaviors[0].citations == []
+
+
+async def test_any_behavior_shown_no_entries_needs_no_citation(ledger: BudgetLedger) -> None:
+    unwritten = found(
+        BehaviorKind.RISK_CONCENTRATION,
+        [Figure(key="possible_monthly_loss", value=600, unit="money")],
+        shown=[],
+    )
+    item = {**ITEMS[0], "observation": "A large share of your portfolio sits in these positions."}
+
+    behaviors = await narrator(ledger, [item]).narrate([unwritten], ENTRIES, USER_ID)
+
+    assert [(b.kind, b.citations) for b in behaviors] == [(BehaviorKind.RISK_CONCENTRATION, [])]
+
+
+async def test_a_quote_given_with_no_entries_is_dropped_but_the_behavior_kept(
+    ledger: BudgetLedger,
+) -> None:
+    behaviors = await narrate(ledger, with_item(0, quotes=[{"entry_id": 12, "quote": "I need"}]))
 
     assert behaviors[0].kind == BehaviorKind.UNDOCUMENTED
     assert behaviors[0].citations == []
