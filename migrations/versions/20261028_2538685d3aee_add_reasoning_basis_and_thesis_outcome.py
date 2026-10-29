@@ -1,7 +1,7 @@
 """add reasoning basis and thesis outcome
 
 Revision ID: 2538685d3aee
-Revises: 1b0265e7b76e
+Revises: b4c3b9d8e5ae
 Create Date: 2026-10-28 22:54:28.855201
 """
 
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "2538685d3aee"
-down_revision: str | Sequence[str] | None = "1b0265e7b76e"
+down_revision: str | Sequence[str] | None = "b4c3b9d8e5ae"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

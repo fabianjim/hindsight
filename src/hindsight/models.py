@@ -20,7 +20,7 @@ from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.schema import UniqueConstraint
 
-from hindsight.vocab import Horizon, IdeaSource, ReasoningBasis, ThesisOutcome
+from hindsight.vocab import AttemptStatus, Horizon, IdeaSource, ReasoningBasis, ThesisOutcome
 
 SCHEMA = "ai"
 
@@ -136,19 +136,31 @@ class ReflectionAidRecord(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
-# one per user and new york day; every day's report is kept and reads take the newest
-class PatternReportRecord(Base):
-    __tablename__ = "pattern_reports"
+# one per user and new york day; every day's report is kept
+class BehaviorReportRecord(Base):
+    __tablename__ = "behavior_reports"
 
     user_id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False)
     day: Mapped[date] = mapped_column(primary_key=True)
-    # the patterns and needs; the rest of the report lives in columns
-    report: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    generated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     as_of: Mapped[date]
     entries_up_to: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # the behaviors and needs; the rest of the report lives in columns
+    report: Mapped[dict[str, Any]] = mapped_column(JSONB)
     model: Mapped[str] = mapped_column(Text)
     prompt_version: Mapped[str] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+# one per user and new york day, written when the model call starts; no status means it never
+# finished, which counts as failed
+class BehaviorReportAttemptRecord(Base):
+    __tablename__ = "behavior_report_attempts"
+
+    user_id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False)
+    day: Mapped[date] = mapped_column(primary_key=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    status: Mapped[AttemptStatus | None] = mapped_column(text_enum(AttemptStatus, "attempt_status"))
 
 
 # paid attempts that raised, per version of an entry's text

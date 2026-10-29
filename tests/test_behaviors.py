@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
-from hindsight.behavior_reports import Figure, Need, Previous
+from hindsight.behavior_reports import Figure, Need, PastBehavior, PastReport, Previous
 from hindsight.behaviors import (
     BehaviorNote,
     BehaviorReportRequest,
@@ -18,8 +18,6 @@ from hindsight.behaviors import (
     Holding,
     HoldingPeriod,
     LedgerTrade,
-    PastBehavior,
-    PastReport,
     find_behaviors,
 )
 from hindsight.citations import Citation

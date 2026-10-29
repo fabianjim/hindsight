@@ -8,7 +8,13 @@ from typing import Annotated, Literal, Self
 
 from pydantic import Field, model_validator
 
-from hindsight.behavior_reports import MAX_BEHAVIORS, Figure, Need, Previous
+from hindsight.behavior_reports import (
+    MAX_BEHAVIORS,
+    Figure,
+    Need,
+    PastReport,
+    Previous,
+)
 from hindsight.budget import BUDGET_ZONE, budget_day
 from hindsight.enrichment import EntryInput, EntryInsight, Ticker
 from hindsight.vocab import (
@@ -150,21 +156,6 @@ HYPE_EMOTIONS = {Emotion.EXCITED, Emotion.FOMO}
 CHASED_BASES = {ReasoningBasis.PRICE_ACTION, ReasoningBasis.COMMENTARY}
 
 Reason = Literal["ENTRIES", "TRADES", "PRICES", "FIELDS"]
-
-
-# a behavior identity in an earlier saved report
-@dataclass(frozen=True)
-class PastBehavior:
-    kind: str
-    subject: str | None
-    figures: list[Figure]
-    trade_ids: list[int]
-
-
-@dataclass(frozen=True)
-class PastReport:
-    day: date
-    behaviors: list[PastBehavior]
 
 
 @dataclass(frozen=True)

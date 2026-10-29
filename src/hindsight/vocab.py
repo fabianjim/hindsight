@@ -77,3 +77,9 @@ class BehaviorKind(StrEnum):
     SHORT_TERM = "short_term"
     RISK_CONCENTRATION = "risk_concentration"
     POSITION_SIZING = "position_sizing"
+
+
+# how a day's behavior report attempt ended
+class AttemptStatus(StrEnum):
+    SAVED = "SAVED"
+    FAILED = "FAILED"
