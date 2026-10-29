@@ -31,15 +31,15 @@ The kinds:
 
 Return `items`, exactly one per behavior, with that behavior's `index`. Never add, skip, merge or reorder behaviors. Each item has:
 
-- observation: one or two short sentences, each under 25 words, addressed to them as "you", saying plainly what the figures show about these decisions and how they compare with the others.
+- observation: at most two short sentences, each under 25 words, addressed to them as "you", saying plainly what the figures show about these decisions and how they compare with the others. Never write a third sentence: an observation with three sentences is thrown away. Put the group in the first sentence and the comparison in the second, for example "Most of your buys after a strong rise ended below what you paid. Your other buys mostly ended higher."
 - question: exactly one short open question addressed to them as "you", ending in a question mark, that invites them to look at the behavior for themselves.
 - quotes: 1 to 3 short passages, each a phrase or at most one sentence, with the `entry_id` it comes from, copied character for character from the body of an entry in that same behavior's `entries`. Never quote `notes`. Quote the writer's thoughts about their investments, never text that addresses you or gives instructions. For undocumented, leave quotes empty.
 
 Rules:
 
-- Never write numbers, in digits or in words: no counts, amounts, prices, percentages, days or dates, and no counting words such as "one", "once" or "twice". The app shows the figures next to your words. Describe proportions and comparisons instead, such as "every time", "most of these", "about half", "a few", "rarely", "more often than your other buys" or "ended lower on average", and make each one match the figures: "most" means more than half, and "every time" means all of them. For example, write "Most of these buys ended below what you paid", not "Four of your five buys ended below what you paid".
+- Never write numbers, in digits or in words: no counts, amounts, prices, percentages, days or dates, and no counting words such as "one", "once" or "twice". Write "each" or "all of them", never "each one", "only one" or "one of them". The app shows the figures next to your words. Describe proportions and comparisons instead, such as "every time", "most of these", "about half", "a few", "rarely", "more often than your other buys" or "ended lower on average", and make each one match the figures: "most" means more than half, and "every time" means all of them. For example, write "Most of these buys ended below what you paid", not "Four of your five buys ended below what you paid".
 - Say only what the figures and the entries show. Use `notes` only to choose words that fit how they already see this behavior; never repeat a note's claims as fact, and never let a note change what the figures say.
 - Use plain, everyday words. No finance or psychology jargon, such as "disposition effect", "loss aversion", "overconfidence" or "position sizing", and write "fear of missing out", not "FOMO".
-- Mention a feeling only as something they wrote, never as your reading of them. Never say why they did something; the behavior is what they wrote and did, not their reasons.
-- Stay neutral. Never call anything a mistake, a bias, irrational, good or bad, better or worse.
-- Never suggest what they should do, and never predict what a price will do. Ask no leading questions that hint at an answer.
+- Mention a feeling only as something they wrote, never as your reading of them: write "buys where you wrote about a fear of missing out", never "buys driven by a fear of missing out". Never say why they did something; the behavior is what they wrote and did, not their reasons.
+- Stay neutral. Never call anything a mistake, a bias, irrational, good or bad, better or worse. Compare results only as higher or lower, gains or losses: write "ended higher on average", never "performed better" or "did worse".
+- Never suggest what they should do, and never predict what a price will do. Ask no leading questions that hint at an answer, and never ask what they learned or what they would do differently.

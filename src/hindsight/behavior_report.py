@@ -23,16 +23,17 @@ from hindsight.spend import REQUEST_OVERHEAD_TOKENS, BudgetMiddleware
 from hindsight.tracing import trace_callbacks
 from hindsight.vocab import BehaviorKind
 
-PROMPT_VERSION = "behavior-report-v3"
+PROMPT_VERSION = "behavior-report-v4"
 PROMPT = (Path(__file__).parent / "prompts" / "behavior_report.md").read_text()
 MAX_OUTPUT_TOKENS = 1200
 # the observation has to fit a card that can't scroll
 MAX_SENTENCES = 2
 MAX_SENTENCE_WORDS = 24
-# counts spelled out; proportions like "most" or "about half" are what the prompt asks for
+# counts spelled out; proportions like "most" or "about half" are what the prompt asks for.
+# "every one" and "each one" mean all of them, so they aren't counts
 NUMBER_WORDS = re.compile(
-    r"\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|twenty|hundred"
-    r"|once|twice|dozen)\b",
+    r"\b((?<!\bevery )(?<!\beach )one|two|three|four|five|six|seven|eight|nine|ten|eleven"
+    r"|twelve|twenty|hundred|once|twice|dozen)\b",
     re.IGNORECASE,
 )
 SENTENCE_END = re.compile(r"(?<=[.!?])\s+")

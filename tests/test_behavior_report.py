@@ -191,6 +191,31 @@ async def test_drops_a_behavior_whose_text_breaks_the_rules(
 
 
 @pytest.mark.parametrize(
+    "observation",
+    [
+        "Every one of these buys ended lower than your other buys.",
+        "Each one of these buys ended lower than your other buys.",
+    ],
+)
+async def test_every_one_and_each_one_mean_all_not_a_count(
+    ledger: BudgetLedger, observation: str
+) -> None:
+    behaviors = await narrate(ledger, with_item(1, observation=observation))
+
+    assert behaviors[1].observation == observation
+
+
+@pytest.mark.parametrize(
+    "observation",
+    ["Only one of these buys ended higher.", "One of these buys ended higher."],
+)
+async def test_a_single_count_is_still_dropped(ledger: BudgetLedger, observation: str) -> None:
+    behaviors = await narrate(ledger, with_item(1, observation=observation))
+
+    assert BehaviorKind.RUN_UP not in [b.kind for b in behaviors]
+
+
+@pytest.mark.parametrize(
     ("observation", "fits"),
     [
         ("Most of these ended lower.", True),
