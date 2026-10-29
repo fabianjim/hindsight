@@ -1,7 +1,7 @@
 import json
 import re
 import secrets
-from collections.abc import Mapping, Sequence
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -88,15 +88,24 @@ class BehaviorNarrator:
     def model_name(self) -> str:
         return self._model_name
 
-    # entries holds each behavior's shown entries and its note entries
+    # entries holds each behavior's shown entries and its note entries. on_start runs once the
+    # reservation succeeds, right before the model call; if it raises, nothing is charged
     async def narrate(
-        self, behaviors: Sequence[FoundBehavior], entries: Mapping[int, EntryInput], user_id: int
+        self,
+        behaviors: Sequence[FoundBehavior],
+        entries: Mapping[int, EntryInput],
+        user_id: int,
+        on_start: Callable[[], Awaitable[None]] | None = None,
     ) -> list[Behavior]:
-        return (await self.run(behaviors, entries, user_id)).behaviors
+        return (await self.run(behaviors, entries, user_id, on_start)).behaviors
 
     # the model's narration alongside the grounded behaviors, for evals
     async def run(
-        self, behaviors: Sequence[FoundBehavior], entries: Mapping[int, EntryInput], user_id: int
+        self,
+        behaviors: Sequence[FoundBehavior],
+        entries: Mapping[int, EntryInput],
+        user_id: int,
+        on_start: Callable[[], Awaitable[None]] | None = None,
     ) -> NarrationRun:
         if not behaviors:
             raise ValueError("no behaviors to narrate")
@@ -107,6 +116,8 @@ class BehaviorNarrator:
         job = await self._ledger.start(secrets.token_hex(32), allowance_for(self._price, message))
         success = False
         try:
+            if on_start is not None:
+                await on_start()
             result = await self._agent.ainvoke(
                 {"messages": [HumanMessage(message)]},
                 context=UserContext(user_id=user_id, generation_id=job.id),

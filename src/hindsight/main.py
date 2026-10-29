@@ -1,7 +1,8 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-from fastapi import APIRouter, Depends, FastAPI
+from fastapi import APIRouter, Depends, FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
 
 from hindsight import api
@@ -27,6 +28,11 @@ def operation_id(route: APIRoute) -> str:
 app = FastAPI(title="hindsight", lifespan=lifespan, generate_unique_id_function=operation_id)
 
 v1 = APIRouter(prefix="/v1", dependencies=[Depends(require_service_token)])
+
+
+@app.exception_handler(api.ProblemError)
+async def problem(_: Request, error: api.ProblemError) -> JSONResponse:
+    return JSONResponse(error.problem.model_dump(by_alias=True), status_code=error.status)
 
 
 @app.get("/health")

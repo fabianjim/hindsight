@@ -4,7 +4,7 @@ from datetime import date, datetime
 from typing import Literal
 
 from pydantic import Field
-from sqlalchemy import func, select, update
+from sqlalchemy import Update, delete, func, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -144,6 +144,8 @@ class BehaviorReportStore:
         )
         async with self._sessions.begin() as session:
             if await session.scalar(statement) is not None:
+                # in the same transaction, so a saved report never sits beside a failed attempt
+                await session.execute(finished(user_id, report.day, AttemptStatus.SAVED))
                 return report.model_copy(update={"saved": True})
         stored = await self.for_day(user_id, report.day)
         assert stored is not None
@@ -208,13 +210,15 @@ class BehaviorReportStore:
             return await session.scalar(statement) is not None
 
     async def finish_attempt(self, user_id: int, day: date, status: AttemptStatus) -> None:
-        statement = (
-            update(BehaviorReportAttemptRecord)
-            .where(
-                BehaviorReportAttemptRecord.user_id == user_id,
-                BehaviorReportAttemptRecord.day == day,
-            )
-            .values(status=status, finished_at=func.now())
+        async with self._sessions.begin() as session:
+            await session.execute(finished(user_id, day, status))
+
+    # for a refusal that came after the attempt was recorded but before the model was called
+    async def discard_attempt(self, user_id: int, day: date) -> None:
+        statement = delete(BehaviorReportAttemptRecord).where(
+            BehaviorReportAttemptRecord.user_id == user_id,
+            BehaviorReportAttemptRecord.day == day,
+            BehaviorReportAttemptRecord.status.is_(None),
         )
         async with self._sessions.begin() as session:
             await session.execute(statement)
@@ -223,6 +227,17 @@ class BehaviorReportStore:
         async with self._sessions() as session:
             record = await session.get(BehaviorReportAttemptRecord, (user_id, day))
             return as_attempt(record) if record else None
+
+
+def finished(user_id: int, day: date, status: AttemptStatus) -> Update:
+    return (
+        update(BehaviorReportAttemptRecord)
+        .where(
+            BehaviorReportAttemptRecord.user_id == user_id,
+            BehaviorReportAttemptRecord.day == day,
+        )
+        .values(status=status, finished_at=func.now())
+    )
 
 
 def load(record: BehaviorReportRecord) -> BehaviorReport:

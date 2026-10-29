@@ -295,3 +295,28 @@ async def test_lists_the_newest_attempt(store: BehaviorReportStore) -> None:
     last = (await store.page(1)).last_attempt
     assert last is not None
     assert (last.day, last.status) == (TODAY, "FAILED")
+
+
+async def test_saving_marks_the_days_attempt_saved(store: BehaviorReportStore) -> None:
+    await store.start_attempt(1, TODAY)
+    await store.start_attempt(2, TODAY)
+
+    await save(store)
+
+    mine, theirs = await store.attempt(1, TODAY), await store.attempt(2, TODAY)
+    assert mine is not None and mine.status == "SAVED"
+    assert theirs is not None and theirs.status == "FAILED"
+
+
+async def test_discards_only_an_unfinished_attempt(store: BehaviorReportStore) -> None:
+    await store.start_attempt(1, TODAY)
+    await store.start_attempt(1, TODAY - timedelta(days=1))
+    await store.finish_attempt(1, TODAY - timedelta(days=1), AttemptStatus.FAILED)
+    await store.start_attempt(2, TODAY)
+
+    await store.discard_attempt(1, TODAY)
+    await store.discard_attempt(1, TODAY - timedelta(days=1))
+
+    assert await store.attempt(1, TODAY) is None
+    assert await store.attempt(1, TODAY - timedelta(days=1)) is not None
+    assert await store.attempt(2, TODAY) is not None

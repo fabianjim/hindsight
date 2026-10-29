@@ -1442,7 +1442,7 @@
                 }
               }
             },
-            "description": "Today's attempt already failed (ATTEMPTED_TODAY)"
+            "description": "Today's attempt failed (ATTEMPTED_TODAY)"
           },
           "422": {
             "content": {

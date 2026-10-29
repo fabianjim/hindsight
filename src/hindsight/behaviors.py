@@ -31,6 +31,9 @@ MAX_TRADES = 1000
 MAX_HOLDING_PERIODS = 1000
 MAX_HOLDINGS = 200
 MAX_AUTO_ENTRY_IDS = 1000
+# a report reads the newest entries up to vestry's autoEntryIds cap, so every auto entry read
+# can be flagged; raise both together
+MAX_ENTRIES = MAX_AUTO_ENTRY_IDS
 MAX_FEEDBACK = 200
 MAX_BEHAVIOR_NOTES = 500
 MAX_NOTE_LENGTH = 2000

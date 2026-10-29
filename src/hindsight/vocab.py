@@ -53,16 +53,6 @@ class ThesisOutcome(StrEnum):
 
 
 # vestry skips kinds it doesn't know, so adding one is backward compatible
-class PatternKind(StrEnum):
-    FELT_VS_DID = "felt_vs_did"
-    OUTCOMES_BY_STATE = "outcomes_by_state"
-    HORIZON_VS_HOLDING = "horizon_vs_holding"
-    GAINS_VS_LOSSES = "gains_vs_losses"
-    SILENT_TRADES = "silent_trades"
-    OPEN_THESES = "open_theses"
-
-
-# vestry skips kinds it doesn't know, so adding one is backward compatible
 class BehaviorKind(StrEnum):
     NO_PLAN = "no_plan"
     UNDOCUMENTED = "undocumented"
