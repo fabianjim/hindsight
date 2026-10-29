@@ -3,9 +3,10 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
+from hindsight.behavior_report import NUMBER_WORDS
 from hindsight.citations import Citation, verified
 from hindsight.enrichment import EntryInput, EntryInsight
-from hindsight.pattern_report import NUMBER_WORDS, NarrationRun
+from hindsight.pattern_report import NarrationRun
 from hindsight.patterns import Candidate, Candidates, PatternReportRequest
 from hindsight.reflection_evals import ADVICE, FEELINGS
 from hindsight.vocab import PatternKind

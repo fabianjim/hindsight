@@ -1,5 +1,4 @@
 import json
-import re
 import secrets
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -12,6 +11,7 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import HumanMessage
 from pydantic import BaseModel, ConfigDict, Field
 
+from hindsight.behavior_report import has_number
 from hindsight.budget import BudgetLedger
 from hindsight.citations import Citation, verified
 from hindsight.enrichment import EntryInput
@@ -26,12 +26,6 @@ from hindsight.vocab import PatternKind
 PROMPT_VERSION = "pattern-report-v2"
 PROMPT = (Path(__file__).parent / "prompts" / "pattern_report.md").read_text()
 MAX_OUTPUT_TOKENS = 1200
-# counts spelled out; proportions like "most" or "about half" are what the prompt asks for
-NUMBER_WORDS = re.compile(
-    r"\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|twenty|hundred"
-    r"|once|twice|dozen)\b",
-    re.IGNORECASE,
-)
 
 
 # openai strict mode requires additionalProperties: false on every object
@@ -190,8 +184,3 @@ def ground(
             )
         )
     return patterns
-
-
-# a count in the text could disagree with the figures shown beside it
-def has_number(text: str) -> bool:
-    return any(c.isdigit() for c in text) or NUMBER_WORDS.search(text) is not None
