@@ -22,7 +22,7 @@ from hindsight.pricing import Price, price_of
 from hindsight.spend import REQUEST_OVERHEAD_TOKENS, BudgetMiddleware
 from hindsight.tracing import trace_callbacks
 
-PROMPT_VERSION = "behavior-report-v5"
+PROMPT_VERSION = "behavior-report-v6"
 PROMPT = (Path(__file__).parent / "prompts" / "behavior_report.md").read_text()
 MAX_OUTPUT_TOKENS = 1200
 # the observation has to fit a card that can't scroll
