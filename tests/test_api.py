@@ -69,6 +69,8 @@ async def test_returns_the_users_insights_in_camel_case(client: httpx.AsyncClien
         "ideaSource": None,
         "tickers": ["NVDA"],
         "themes": ["AI capex"],
+        "reasoningBasis": None,
+        "thesisOutcome": None,
     }
 
 

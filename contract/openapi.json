@@ -1,6 +1,396 @@
 {
   "components": {
     "schemas": {
+      "Attempt": {
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "SAVED",
+              "FAILED"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "day",
+          "status",
+          "at"
+        ],
+        "title": "Attempt",
+        "type": "object"
+      },
+      "Behavior": {
+        "properties": {
+          "citations": {
+            "items": {
+              "$ref": "#/components/schemas/Citation"
+            },
+            "title": "Citations",
+            "type": "array"
+          },
+          "entryIds": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Entryids",
+            "type": "array"
+          },
+          "figures": {
+            "items": {
+              "$ref": "#/components/schemas/Figure"
+            },
+            "title": "Figures",
+            "type": "array"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/BehaviorKind"
+          },
+          "observation": {
+            "title": "Observation",
+            "type": "string"
+          },
+          "previous": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Previous"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "question": {
+            "title": "Question",
+            "type": "string"
+          },
+          "subject": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject"
+          },
+          "tradeIds": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Tradeids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "kind",
+          "subject",
+          "figures",
+          "previous",
+          "observation",
+          "question",
+          "citations",
+          "tradeIds",
+          "entryIds"
+        ],
+        "title": "Behavior",
+        "type": "object"
+      },
+      "BehaviorKind": {
+        "enum": [
+          "no_plan",
+          "undocumented",
+          "emotional",
+          "fomo",
+          "hype",
+          "run_up",
+          "overtrading",
+          "overconfidence",
+          "price_action",
+          "loss_aversion",
+          "short_term",
+          "risk_concentration",
+          "position_sizing"
+        ],
+        "title": "BehaviorKind",
+        "type": "string"
+      },
+      "BehaviorNote": {
+        "properties": {
+          "entryId": {
+            "title": "Entryid",
+            "type": "integer"
+          },
+          "kind": {
+            "maxLength": 40,
+            "title": "Kind",
+            "type": "string"
+          },
+          "subject": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject"
+          }
+        },
+        "required": [
+          "kind",
+          "subject",
+          "entryId"
+        ],
+        "title": "BehaviorNote",
+        "type": "object"
+      },
+      "BehaviorReport": {
+        "properties": {
+          "asOf": {
+            "format": "date",
+            "title": "Asof",
+            "type": "string"
+          },
+          "behaviors": {
+            "items": {
+              "$ref": "#/components/schemas/Behavior"
+            },
+            "maxItems": 5,
+            "title": "Behaviors",
+            "type": "array"
+          },
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "entriesUpTo": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entriesupto"
+          },
+          "generatedAt": {
+            "format": "date-time",
+            "title": "Generatedat",
+            "type": "string"
+          },
+          "needs": {
+            "items": {
+              "$ref": "#/components/schemas/Need"
+            },
+            "title": "Needs",
+            "type": "array"
+          },
+          "saved": {
+            "title": "Saved",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "day",
+          "generatedAt",
+          "asOf",
+          "entriesUpTo",
+          "saved",
+          "behaviors",
+          "needs"
+        ],
+        "title": "BehaviorReport",
+        "type": "object"
+      },
+      "BehaviorReportList": {
+        "properties": {
+          "hasOlder": {
+            "title": "Hasolder",
+            "type": "boolean"
+          },
+          "lastAttempt": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Attempt"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reports": {
+            "items": {
+              "$ref": "#/components/schemas/BehaviorReportSummary"
+            },
+            "title": "Reports",
+            "type": "array"
+          }
+        },
+        "required": [
+          "reports",
+          "hasOlder",
+          "lastAttempt"
+        ],
+        "title": "BehaviorReportList",
+        "type": "object"
+      },
+      "BehaviorReportRequest": {
+        "properties": {
+          "asOf": {
+            "format": "date",
+            "title": "Asof",
+            "type": "string"
+          },
+          "autoEntryIds": {
+            "default": [],
+            "items": {
+              "type": "integer"
+            },
+            "maxItems": 1000,
+            "title": "Autoentryids",
+            "type": "array"
+          },
+          "behaviorNotes": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/BehaviorNote"
+            },
+            "maxItems": 500,
+            "title": "Behaviornotes",
+            "type": "array"
+          },
+          "feedback": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Feedback"
+            },
+            "maxItems": 200,
+            "title": "Feedback",
+            "type": "array"
+          },
+          "holdingPeriods": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/HoldingPeriod"
+            },
+            "maxItems": 1000,
+            "title": "Holdingperiods",
+            "type": "array"
+          },
+          "holdings": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Holding"
+            },
+            "maxItems": 200,
+            "title": "Holdings",
+            "type": "array"
+          },
+          "portfolioValue": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Portfoliovalue"
+          },
+          "trades": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/LedgerTrade"
+            },
+            "maxItems": 1000,
+            "title": "Trades",
+            "type": "array"
+          }
+        },
+        "required": [
+          "asOf"
+        ],
+        "title": "BehaviorReportRequest",
+        "type": "object"
+      },
+      "BehaviorReportSummary": {
+        "properties": {
+          "behaviors": {
+            "items": {
+              "$ref": "#/components/schemas/BehaviorSummary"
+            },
+            "title": "Behaviors",
+            "type": "array"
+          },
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "generatedAt": {
+            "format": "date-time",
+            "title": "Generatedat",
+            "type": "string"
+          }
+        },
+        "required": [
+          "day",
+          "generatedAt",
+          "behaviors"
+        ],
+        "title": "BehaviorReportSummary",
+        "type": "object"
+      },
+      "BehaviorSummary": {
+        "properties": {
+          "figures": {
+            "items": {
+              "$ref": "#/components/schemas/Figure"
+            },
+            "title": "Figures",
+            "type": "array"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/BehaviorKind"
+          },
+          "subject": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject"
+          }
+        },
+        "required": [
+          "kind",
+          "subject",
+          "figures"
+        ],
+        "title": "BehaviorSummary",
+        "type": "object"
+      },
       "Citation": {
         "properties": {
           "entryId": {
@@ -114,6 +504,16 @@
               }
             ]
           },
+          "reasoningBasis": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReasoningBasis"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "themes": {
             "items": {
               "type": "string"
@@ -125,6 +525,16 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/Claim"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "thesisOutcome": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ThesisOutcome"
               },
               {
                 "type": "null"
@@ -186,6 +596,96 @@
         "title": "EntryInsightList",
         "type": "object"
       },
+      "Feedback": {
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "kind": {
+            "maxLength": 40,
+            "title": "Kind",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "reaction": {
+            "enum": [
+              "FITS",
+              "KNEW",
+              "DOESNT_FIT"
+            ],
+            "title": "Reaction",
+            "type": "string"
+          },
+          "reportDay": {
+            "format": "date",
+            "title": "Reportday",
+            "type": "string"
+          },
+          "subject": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject"
+          }
+        },
+        "required": [
+          "kind",
+          "subject",
+          "reaction",
+          "reportDay",
+          "at"
+        ],
+        "title": "Feedback",
+        "type": "object"
+      },
+      "Figure": {
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "unit": {
+            "enum": [
+              "count",
+              "money",
+              "fraction",
+              "days"
+            ],
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "number"
+          }
+        },
+        "required": [
+          "key",
+          "value",
+          "unit"
+        ],
+        "title": "Figure",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -197,6 +697,107 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "Holding": {
+        "properties": {
+          "marketValue": {
+            "exclusiveMinimum": 0.0,
+            "title": "Marketvalue",
+            "type": "number"
+          },
+          "possibleMonthlyLoss": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Possiblemonthlyloss"
+          },
+          "sector": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sector"
+          },
+          "ticker": {
+            "pattern": "^[A-Z][A-Z0-9.\\-]{0,9}$",
+            "title": "Ticker",
+            "type": "string"
+          },
+          "weight": {
+            "minimum": 0.0,
+            "title": "Weight",
+            "type": "number"
+          }
+        },
+        "required": [
+          "ticker",
+          "marketValue",
+          "weight"
+        ],
+        "title": "Holding",
+        "type": "object"
+      },
+      "HoldingPeriod": {
+        "properties": {
+          "closedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closedat"
+          },
+          "cost": {
+            "exclusiveMinimum": 0.0,
+            "title": "Cost",
+            "type": "number"
+          },
+          "openedAt": {
+            "format": "date-time",
+            "title": "Openedat",
+            "type": "string"
+          },
+          "pnl": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pnl"
+          },
+          "ticker": {
+            "pattern": "^[A-Z][A-Z0-9.\\-]{0,9}$",
+            "title": "Ticker",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ticker",
+          "openedAt",
+          "closedAt",
+          "cost",
+          "pnl"
+        ],
+        "title": "HoldingPeriod",
         "type": "object"
       },
       "Horizon": {
@@ -220,8 +821,205 @@
         "title": "IdeaSource",
         "type": "string"
       },
+      "LedgerTrade": {
+        "properties": {
+          "initial": {
+            "title": "Initial",
+            "type": "boolean"
+          },
+          "outcomeKind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "SOLD",
+                  "LATEST"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outcomekind"
+          },
+          "outcomeOn": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outcomeon"
+          },
+          "outcomePrice": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outcomeprice"
+          },
+          "price": {
+            "exclusiveMinimum": 0.0,
+            "title": "Price",
+            "type": "number"
+          },
+          "runUp": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Runup"
+          },
+          "runUpStatus": {
+            "default": "UNAVAILABLE",
+            "enum": [
+              "KNOWN",
+              "PENDING",
+              "UNAVAILABLE"
+            ],
+            "title": "Runupstatus",
+            "type": "string"
+          },
+          "shares": {
+            "exclusiveMinimum": 0.0,
+            "title": "Shares",
+            "type": "number"
+          },
+          "side": {
+            "enum": [
+              "BUY",
+              "SELL"
+            ],
+            "title": "Side",
+            "type": "string"
+          },
+          "ticker": {
+            "pattern": "^[A-Z][A-Z0-9.\\-]{0,9}$",
+            "title": "Ticker",
+            "type": "string"
+          },
+          "timestamp": {
+            "format": "date-time",
+            "title": "Timestamp",
+            "type": "string"
+          },
+          "tradeId": {
+            "title": "Tradeid",
+            "type": "integer"
+          },
+          "weightAtBuy": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weightatbuy"
+          }
+        },
+        "required": [
+          "tradeId",
+          "ticker",
+          "side",
+          "shares",
+          "price",
+          "timestamp",
+          "initial"
+        ],
+        "title": "LedgerTrade",
+        "type": "object"
+      },
+      "Need": {
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/BehaviorKind"
+          },
+          "more": {
+            "minimum": 1.0,
+            "title": "More",
+            "type": "integer"
+          },
+          "reason": {
+            "enum": [
+              "ENTRIES",
+              "TRADES",
+              "PRICES",
+              "FIELDS"
+            ],
+            "title": "Reason",
+            "type": "string"
+          },
+          "subject": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject"
+          }
+        },
+        "required": [
+          "kind",
+          "subject",
+          "more",
+          "reason"
+        ],
+        "title": "Need",
+        "type": "object"
+      },
+      "Previous": {
+        "properties": {
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "figures": {
+            "items": {
+              "$ref": "#/components/schemas/Figure"
+            },
+            "title": "Figures",
+            "type": "array"
+          }
+        },
+        "required": [
+          "day",
+          "figures"
+        ],
+        "title": "Previous",
+        "type": "object"
+      },
       "Problem": {
         "properties": {
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
           "detail": {
             "title": "Detail",
             "type": "string"
@@ -232,6 +1030,16 @@
         ],
         "title": "Problem",
         "type": "object"
+      },
+      "ReasoningBasis": {
+        "enum": [
+          "fundamentals",
+          "price_action",
+          "commentary",
+          "mixed"
+        ],
+        "title": "ReasoningBasis",
+        "type": "string"
       },
       "ReflectionAid": {
         "properties": {
@@ -301,6 +1109,25 @@
           "remainingToday"
         ],
         "title": "ReflectionAidResult",
+        "type": "object"
+      },
+      "SavedBehaviorReport": {
+        "properties": {
+          "report": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BehaviorReport"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "report"
+        ],
+        "title": "SavedBehaviorReport",
         "type": "object"
       },
       "SavedReflectionAid": {
@@ -380,6 +1207,15 @@
         },
         "title": "Since",
         "type": "object"
+      },
+      "ThesisOutcome": {
+        "enum": [
+          "played_out",
+          "did_not",
+          "mixed"
+        ],
+        "title": "ThesisOutcome",
+        "type": "string"
       },
       "Trade": {
         "properties": {
@@ -490,6 +1326,205 @@
           }
         },
         "summary": "Health"
+      }
+    },
+    "/v1/users/{userId}/behavior-reports": {
+      "get": {
+        "operationId": "list_behavior_reports",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "schema": {
+              "title": "Userid",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "before",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BehaviorReportList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Behavior Reports"
+      },
+      "post": {
+        "operationId": "create_behavior_report",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "schema": {
+              "title": "Userid",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BehaviorReportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BehaviorReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Today's attempt failed (ATTEMPTED_TODAY)"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "AI is off, out of budget or unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Behavior Report"
+      }
+    },
+    "/v1/users/{userId}/behavior-reports/{day}": {
+      "get": {
+        "operationId": "get_behavior_report",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "schema": {
+              "title": "Userid",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "day",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Day",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedBehaviorReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Behavior Report"
       }
     },
     "/v1/users/{userId}/entries/{entryId}/reflection-aid": {

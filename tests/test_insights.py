@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from hindsight.citations import Citation
 from hindsight.enrichment import Claim, Enrichment, EntryInsight
 from hindsight.insights import InsightStore
-from hindsight.vocab import Emotion, Horizon, IdeaSource
+from hindsight.vocab import Emotion, Horizon, IdeaSource, ReasoningBasis, ThesisOutcome
 
 pytestmark = pytest.mark.anyio
 
@@ -23,6 +23,8 @@ INSIGHT = EntryInsight(
     idea_source=IdeaSource.OWN_RESEARCH,
     tickers=["NVDA", "BRK.B"],
     themes=["AI capex"],
+    reasoning_basis=ReasoningBasis.FUNDAMENTALS,
+    thesis_outcome=ThesisOutcome.PLAYED_OUT,
 )
 
 

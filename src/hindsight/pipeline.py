@@ -33,6 +33,10 @@ USER_ENTRIES_QUERY = text(
     f"select {ENTRY_COLUMNS} from core_read.journal_entries"
     " where user_id = :user_id and id = any(:ids)"
 )
+NEWEST_USER_ENTRIES_QUERY = text(
+    f"select {ENTRY_COLUMNS} from core_read.journal_entries"
+    " where user_id = :user_id order by timestamp desc, id desc limit :limit"
+)
 PAGE_QUERY = text(
     f"select {ENTRY_COLUMNS} from core_read.journal_entries"
     " where id > :after order by id limit :limit"
@@ -63,6 +67,14 @@ class EntrySource:
         async with self._sessions() as session:
             rows = await session.execute(USER_ENTRIES_QUERY, {"user_id": user_id, "ids": entry_ids})
             return {row["id"]: to_source_entry(row).entry for row in rows.mappings()}
+
+    # newest first
+    async def newest_for_user(self, user_id: int, limit: int) -> list[EntryInput]:
+        async with self._sessions() as session:
+            rows = await session.execute(
+                NEWEST_USER_ENTRIES_QUERY, {"user_id": user_id, "limit": limit}
+            )
+            return [to_source_entry(row).entry for row in rows.mappings()]
 
     async def page(self, after: int, limit: int) -> list[SourceEntry]:
         async with self._sessions() as session:

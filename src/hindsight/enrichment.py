@@ -17,10 +17,17 @@ from hindsight.citations import Citation, verified
 from hindsight.llm import UserContext
 from hindsight.spend import BudgetMiddleware
 from hindsight.tracing import trace_callbacks
-from hindsight.vocab import Emotion, EntryType, Horizon, IdeaSource
+from hindsight.vocab import (
+    Emotion,
+    EntryType,
+    Horizon,
+    IdeaSource,
+    ReasoningBasis,
+    ThesisOutcome,
+)
 from hindsight.wire import WireModel
 
-PROMPT_VERSION = "entry-insight-v1"
+PROMPT_VERSION = "entry-insight-v2"
 PROMPT = (Path(__file__).parent / "prompts" / "entry_insight.md").read_text()
 MAX_OUTPUT_TOKENS = 512
 ALLOWANCE_MICROS = 10_000
@@ -59,6 +66,8 @@ class Extraction(BaseModel):
     idea_source: IdeaSource | None
     tickers: list[Ticker]
     themes: list[str] = Field(max_length=5)
+    reasoning_basis: ReasoningBasis | None
+    thesis_outcome: ThesisOutcome | None
 
 
 class Claim(WireModel):
@@ -75,6 +84,9 @@ class EntryInsight(WireModel):
     idea_source: IdeaSource | None
     tickers: list[Ticker]
     themes: list[str]
+    # none on insights extracted before these fields existed
+    reasoning_basis: ReasoningBasis | None = None
+    thesis_outcome: ThesisOutcome | None = None
 
 
 @dataclass(frozen=True)
@@ -164,4 +176,6 @@ def ground(extraction: Extraction, entry: EntryInput) -> EntryInsight:
         idea_source=extraction.idea_source,
         tickers=list(dict.fromkeys(extraction.tickers)),
         themes=list(dict.fromkeys(t.strip() for t in extraction.themes if t.strip())),
+        reasoning_basis=extraction.reasoning_basis,
+        thesis_outcome=extraction.thesis_outcome,
     )

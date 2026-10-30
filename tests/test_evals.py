@@ -10,7 +10,7 @@ from hindsight.budget import BudgetLedger, Limits
 from hindsight.citations import Citation
 from hindsight.enrichment import Claim, Enrichment, EntryEnricher, EntryInsight, Extraction
 from hindsight.evals import Expected, load_cases, score, summarize
-from hindsight.vocab import Emotion
+from hindsight.vocab import Emotion, ReasoningBasis
 from scripts.eval_entry_insight import DATASET, main, run_locally
 from tests.fakes import FakeToolModel
 
@@ -25,6 +25,8 @@ EXPECTED = Expected(
     idea_source=None,
     emotions=[Emotion.FOMO],
     tickers=["NVDA"],
+    reasoning_basis=ReasoningBasis.PRICE_ACTION,
+    thesis_outcome=None,
 )
 NOTHING: dict[str, Any] = {
     "thesis": None,
@@ -35,6 +37,8 @@ NOTHING: dict[str, Any] = {
     "idea_source": None,
     "tickers": [],
     "themes": [],
+    "reasoning_basis": None,
+    "thesis_outcome": None,
 }
 
 
@@ -65,7 +69,13 @@ def test_a_perfect_answer_scores_one_everywhere() -> None:
     scores = score(
         EXPECTED,
         result(
-            {"thesis": CLAIM, "conviction": 4, "emotions": ["fomo"], "tickers": ["NVDA"]},
+            {
+                "thesis": CLAIM,
+                "conviction": 4,
+                "emotions": ["fomo"],
+                "tickers": ["NVDA"],
+                "reasoning_basis": "price_action",
+            },
             raw={"thesis": {"summary": "Demand lasts", "quotes": ["demand lasts"]}},
         ),
     )
@@ -78,7 +88,13 @@ def test_scores_each_kind_of_miss() -> None:
     scores = score(
         EXPECTED,
         result(
-            {"conviction": 3, "emotions": ["fomo", "anxious"], "tickers": []},
+            {
+                "conviction": 3,
+                "emotions": ["fomo", "anxious"],
+                "tickers": [],
+                "reasoning_basis": "commentary",
+                "thesis_outcome": "played_out",
+            },
             raw={
                 "thesis": {"summary": "Invented", "quotes": ["not in the entry"]},
                 "exit_condition": {"summary": "Invented", "quotes": ["nor this"]},
@@ -92,6 +108,7 @@ def test_scores_each_kind_of_miss() -> None:
     assert scores["emotions"] == 0.5
     assert scores["tickers"] == 0
     assert scores["citation_survival"] == 0
+    assert (scores["reasoning_basis"], scores["thesis_outcome"]) == (0, 0)
 
 
 def test_citation_survival_is_skipped_when_nothing_was_claimed() -> None:
