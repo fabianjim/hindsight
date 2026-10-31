@@ -734,7 +734,8 @@ def risk_concentration(book: Book) -> Group:
 
 def position_sizing(book: Book) -> Group:
     sized = sorted(
-        (t for t in buys(book) if t.weight_at_buy is not None),
+        # a buy made with nothing else held is the whole portfolio by definition
+        (t for t in buys(book) if t.weight_at_buy is not None and t.weight_at_buy < 1),
         key=lambda t: (-(t.weight_at_buy or 0), t.timestamp, t.trade_id),
     )
     top = sized[: ceil(len(sized) / 4)]
@@ -783,6 +784,8 @@ def standard(prefix: str, decisions: list[Decision]) -> list[Figure]:
     if known:
         pnl = sum(d.pnl or 0 for d in known)
         figures += [
+            # gains are out of these, not out of decisions
+            count(f"{prefix}outcomes", len(known)),
             money(f"{prefix}pnl", pnl),
             money(f"{prefix}avg_pnl", pnl / len(known)),
             fraction(f"{prefix}avg_return", fmean(d.ret or 0 for d in known)),

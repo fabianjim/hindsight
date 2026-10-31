@@ -296,6 +296,7 @@ async def test_generates_saves_and_returns_camel_case(
                 "subject": None,
                 "figures": [
                     {"key": "decisions", "value": 3.0, "unit": "count"},
+                    {"key": "outcomes", "value": 3.0, "unit": "count"},
                     {"key": "pnl", "value": -90.0, "unit": "money"},
                     {"key": "avg_pnl", "value": -30.0, "unit": "money"},
                     {"key": "avg_return", "value": -0.1, "unit": "fraction"},

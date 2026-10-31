@@ -283,10 +283,17 @@ def keys(behavior: FoundBehavior) -> list[str]:
 
 
 def standard(
-    decisions: int, pnl: float, avg_pnl: float, avg_return: float, gains: int, prefix: str = ""
+    decisions: int,
+    pnl: float,
+    avg_pnl: float,
+    avg_return: float,
+    gains: int,
+    prefix: str = "",
+    outcomes: int | None = None,
 ) -> list[tuple[str, float, str]]:
     return [
         (f"{prefix}decisions", decisions, "count"),
+        (f"{prefix}outcomes", decisions if outcomes is None else outcomes, "count"),
         (f"{prefix}pnl", pnl, "money"),
         (f"{prefix}avg_pnl", avg_pnl, "money"),
         (f"{prefix}avg_return", avg_return, "fraction"),
@@ -295,9 +302,14 @@ def standard(
 
 
 def baseline(
-    decisions: int, pnl: float, avg_pnl: float, avg_return: float, gains: int
+    decisions: int,
+    pnl: float,
+    avg_pnl: float,
+    avg_return: float,
+    gains: int,
+    outcomes: int | None = None,
 ) -> list[tuple[str, float, str]]:
-    return standard(decisions, pnl, avg_pnl, avg_return, gains, "baseline_")
+    return standard(decisions, pnl, avg_pnl, avg_return, gains, "baseline_", outcomes)
 
 
 PLANNED = [insight(thesis=True), insight(exit=True), insight(horizon=Horizon.WEEKS)]
@@ -350,7 +362,9 @@ def test_undocumented_compares_trades_without_entries_to_trades_with_them() -> N
     undocumented = get(find(log), UNDOCUMENTED)
 
     # the sell counts as a decision with an unknown outcome
-    assert figures(undocumented) == standard(3, 20, 10, 0.1, 2) + baseline(3, -30, -10, -0.1, 0)
+    assert figures(undocumented) == standard(3, 20, 10, 0.1, 2, outcomes=2) + baseline(
+        3, -30, -10, -0.1, 0
+    )
     assert undocumented.trade_ids == [3, 2, 1]
     assert undocumented.entry_ids == []
 
@@ -775,8 +789,8 @@ def test_risk_concentration_takes_concentrated_holdings_without_an_exit() -> Non
     risk = get(find(log, periods=periods, holdings=holdings), BehaviorKind.RISK_CONCENTRATION)
 
     assert figures(risk) == [
-        *standard(3, 10, 5, 0.05, 1),
-        *baseline(3, 40, 40, 0.4, 1),
+        *standard(3, 10, 5, 0.05, 1, outcomes=2),
+        *baseline(3, 40, 40, 0.4, 1, outcomes=1),
         ("possible_monthly_loss", 80, "money"),
         ("largest_weight", 0.3, "fraction"),
         ("sector_weight", 0.45, "fraction"),
@@ -862,6 +876,15 @@ def test_position_sizing_skips_large_buys_still_being_extracted() -> None:
     assert ("large_low_conviction", 0, "count") in figures(sizing)
 
 
+def test_position_sizing_leaves_out_buys_made_with_nothing_else_held() -> None:
+    log = bare(1, weight=1.0) + bare(2, 3, 4, weight=0.5) + bare(5, 6, 7, 8, 9, 10, weight=0.1)
+
+    sizing = get(find(log), BehaviorKind.POSITION_SIZING)
+
+    assert sizing.trade_ids == [4, 3, 2]
+    assert ("baseline_decisions", 6, "count") in figures(sizing)
+
+
 def test_position_sizing_short_waits_for_trades() -> None:
     found = find(bare(1, 2, 3, 4, weight=0.1))
 
@@ -878,7 +901,7 @@ def test_unknown_outcomes_count_as_decisions_but_not_money() -> None:
 
     undocumented = get(find(log), UNDOCUMENTED)
 
-    assert figures(undocumented) == standard(3, 10, 10, 0.1, 1)
+    assert figures(undocumented) == standard(3, 10, 10, 0.1, 1, outcomes=1)
 
 
 def test_all_unknown_outcomes_leave_only_the_count() -> None:

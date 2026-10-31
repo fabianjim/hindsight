@@ -337,6 +337,7 @@ async def test_prompt_carries_the_behaviors_but_never_the_user(ledger: BudgetLed
             {"key": "baseline_avg_return", "value": 0.083, "unit": "fraction"},
             {"key": "median_run_up", "value": 0.142, "unit": "fraction"},
         ],
+        "proportions": {},
         "entries": [
             {
                 "id": 12,
@@ -407,6 +408,26 @@ async def test_refuses_before_any_spend(
         await narrator(ledger, ITEMS).narrate(behaviors, ENTRIES, USER_ID)
 
     assert await statuses(sessions) == []
+
+
+@pytest.mark.parametrize(
+    ("gains", "outcomes", "word"),
+    [(0, 4, "none"), (1, 3, "a few"), (2, 5, "about half"), (3, 5, "most"), (3, 3, "all")],
+)
+def test_gains_come_with_the_word_for_their_share(gains: int, outcomes: int, word: str) -> None:
+    behavior = found(
+        BehaviorKind.PRICE_ACTION,
+        [
+            Figure(key="decisions", value=outcomes + 2, unit="count"),
+            Figure(key="outcomes", value=outcomes, unit="count"),
+            Figure(key="gains", value=gains, unit="count"),
+            Figure(key="baseline_decisions", value=3, unit="count"),
+        ],
+        shown=[],
+    )
+
+    # out of the known outcomes, not the decisions; no word without outcomes
+    assert behavior_report.proportions(behavior) == {"gains": word}
 
 
 def test_strict_schema_closes_every_object() -> None:

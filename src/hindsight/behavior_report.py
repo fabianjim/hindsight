@@ -22,7 +22,7 @@ from hindsight.pricing import Price, price_of
 from hindsight.spend import REQUEST_OVERHEAD_TOKENS, BudgetMiddleware
 from hindsight.tracing import trace_callbacks
 
-PROMPT_VERSION = "behavior-report-v6"
+PROMPT_VERSION = "behavior-report-v7"
 PROMPT = (Path(__file__).parent / "prompts" / "behavior_report.md").read_text()
 MAX_OUTPUT_TOKENS = 1200
 # the observation has to fit a card that can't scroll
@@ -149,6 +149,7 @@ def render(behaviors: Sequence[FoundBehavior], entries: Mapping[int, EntryInput]
                     {"key": f.key, "value": figure_value(f.value), "unit": f.unit}
                     for f in b.figures
                 ],
+                "proportions": proportions(b),
                 "entries": [entry_fields(entries[i]) for i in b.shown_entry_ids if i in entries],
                 "notes": notes_of(b, entries),
             }
@@ -156,6 +157,29 @@ def render(behaviors: Sequence[FoundBehavior], entries: Mapping[int, EntryInput]
         ]
     }
     return json.dumps(fields, ensure_ascii=False, indent=2)
+
+
+# the model reads "all" as "mostly" when left to judge a share itself
+def proportions(behavior: FoundBehavior) -> dict[str, str]:
+    values = {f.key: f.value for f in behavior.figures}
+    words: dict[str, str] = {}
+    for prefix in ("", "baseline_"):
+        gains, outcomes = values.get(f"{prefix}gains"), values.get(f"{prefix}outcomes")
+        if gains is not None and outcomes:
+            words[f"{prefix}gains"] = proportion(gains / outcomes)
+    return words
+
+
+def proportion(share: float) -> str:
+    if share == 0:
+        return "none"
+    if share == 1:
+        return "all"
+    if share > 0.5:
+        return "most"
+    if share >= 0.4:
+        return "about half"
+    return "a few"
 
 
 # context for the wording only; never citable
